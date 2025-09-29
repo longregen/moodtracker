@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <group android:scaleX="0.6"
+           android:scaleY="0.6"
+           android:translateX="21.6"
+           android:translateY="21.6">
+        <!-- Heart shape -->
+        <path android:fillColor="#10B981"
+              android:pathData="M54,36 C48,32, 40,32, 40,40 C40,48, 54,60, 54,60 C54,60, 68,48, 68,40 C68,32, 60,32, 54,36 Z"/>
+        
+        <!-- Pulse line -->
+        <path android:strokeColor="#FFFFFF"
+              android:strokeWidth="2"
+              android:strokeLineCap="round"
+              android:pathData="M24,54 L36,54 L40,44 L44,58 L48,36 L52,64 L56,40 L60,54 L84,54"/>
+        
+        <!-- Data points as circles -->
+        <circle android:fillColor="#FFFFFF" 
+                android:pathData="M36,54 A1.5,1.5 0 1,1 36,57 A1.5,1.5 0 1,1 36,54"/>
+        <circle android:fillColor="#FFFFFF" 
+                android:pathData="M44,58 A1.5,1.5 0 1,1 44,61 A1.5,1.5 0 1,1 44,58"/>
+        <circle android:fillColor="#FFFFFF" 
+                android:pathData="M48,36 A1.5,1.5 0 1,1 48,39 A1.5,1.5 0 1,1 48,36"/>
+        <circle android:fillColor="#FFFFFF" 
+                android:pathData="M52,64 A1.5,1.5 0 1,1 52,67 A1.5,1.5 0 1,1 52,64"/>
+        <circle android:fillColor="#FFFFFF" 
+                android:pathData="M56,40 A1.5,1.5 0 1,1 56,43 A1.5,1.5 0 1,1 56,40"/>
+        <circle android:fillColor="#FFFFFF" 
+                android:pathData="M60,54 A1.5,1.5 0 1,1 60,57 A1.5,1.5 0 1,1 60,54"/>
+    </group>
+</vector>

@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">MoodTracker</string>
+    
+    <!-- Navigation -->
+    <string name="nav_main">Main</string>
+    <string name="nav_logs">Logs</string>
+    <string name="nav_config">Config</string>
+    
+    <!-- Main Screen -->
+    <string name="main_title">Current Questions</string>
+    <string name="last_answer">Last answer: %1$s</string>
+    <string name="answered_at">Answered %1$s</string>
+    <string name="never_answered">Never answered</string>
+    <string name="answer_questions">Answer Questions</string>
+    
+    <!-- Logs Screen -->
+    <string name="logs_title">Logs</string>
+    <string name="logs_timeline">Timeline</string>
+    <string name="logs_questions">Questions</string>
+    <string name="logs_particular">Particular Question</string>
+    <string name="show_last_n_answers">Show last %1$d answers</string>
+    
+    <!-- Config Screen -->
+    <string name="config_title">Configuration</string>
+    <string name="add_question">Add Question</string>
+    <string name="edit_question">Edit Question</string>
+    <string name="delete_question">Delete Question</string>
+    <string name="question_text">Question Text</string>
+    <string name="question_type">Question Type</string>
+    <string name="question_options">Options (one per line)</string>
+    <string name="save">Save</string>
+    <string name="cancel">Cancel</string>
+    <string name="delete">Delete</string>
+    <string name="hide">Hide</string>
+    <string name="show">Show</string>
+    
+    <!-- Answer Screen -->
+    <string name="answer_title">Answer Questions</string>
+    <string name="question_progress">Question %1$d of %2$d</string>
+    <string name="submit_answer">Submit Answer</string>
+    <string name="snooze">Snooze</string>
+    <string name="additional_notes">Additional notes (optional)</string>
+    <string name="yes">Yes</string>
+    <string name="no">No</string>
+    <string name="enter_number">Enter number</string>
+    <string name="enter_text">Enter your answer</string>
+    
+    <!-- Notifications -->
+    <string name="notification_title">Time to check in!</string>
+    <string name="notification_text">How are you doing? Tap to answer your questions.</string>
+    <string name="notification_channel_name">Daily Check-ins</string>
+    <string name="notification_channel_description">Notifications for daily mood and activity check-ins</string>
+    
+    <!-- Snooze options -->
+    <string name="snooze_15min">15 minutes</string>
+    <string name="snooze_1hour">1 hour</string>
+    <string name="snooze_3hours">3 hours</string>
+    
+    <!-- Question types -->
+    <string name="type_multiple_choice">Multiple Choice</string>
+    <string name="type_yes_no">Yes/No</string>
+    <string name="type_number">Number</string>
+    <string name="type_text">Text</string>
+    
+    <!-- Validation -->
+    <string name="error_empty_question">Question text cannot be empty</string>
+    <string name="error_empty_options">Multiple choice questions need at least 2 options</string>
+    <string name="error_invalid_number">Please enter a valid number</string>
+    
+    <!-- Confirmation dialogs -->
+    <string name="confirm_delete_question">Are you sure you want to delete this question? This will also delete all associated answers.</string>
+    <string name="confirm_modify_question">Modifying this question may cause data consistency issues. Continue?</string>
+    <string name="data_consistency_warning">Warning: This change may affect data consistency</string>
+    
+    <!-- Time formatting -->
+    <string name="time_format_today">Today at %1$s</string>
+    <string name="time_format_yesterday">Yesterday at %1$s</string>
+    <string name="time_format_date">%1$s at %2$s</string>
+    
+    <!-- Empty states -->
+    <string name="empty_questions">No questions configured. Add some questions in the Configuration tab.</string>
+    <string name="empty_answers">No answers yet. Start answering questions to see your progress!</string>
+    <string name="empty_logs">No logs available.</string>
+</resources>
