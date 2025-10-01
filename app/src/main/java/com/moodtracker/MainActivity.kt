@@ -1,5 +1,6 @@
 package com.moodtracker
 
+import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -15,7 +16,6 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.res.stringResource
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.NavHost
@@ -32,10 +32,10 @@ import com.moodtracker.ui.logs.LogsScreen
 import com.moodtracker.ui.main.MainScreen
 import com.moodtracker.ui.notifications.NotificationScheduleScreen
 import com.moodtracker.ui.theme.MoodTrackerTheme
-import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
     private lateinit var repository: MoodTrackerRepository
+    private var navigateToAnswerQuestions by mutableStateOf(false)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -56,10 +56,26 @@ class MainActivity : ComponentActivity() {
         // Start WorkManager for periodic notification scheduling
         com.moodtracker.services.NotificationWorker.schedulePeriodicWork(this)
 
+        // Check if app was opened from a notification
+        val intentAction = intent?.getStringExtra("action")
+        navigateToAnswerQuestions = intentAction == "answer_questions"
+        
         setContent {
             MoodTrackerTheme {
-                MoodTrackerApp(repository)
+                MoodTrackerApp(
+                    repository = repository,
+                    shouldNavigateToAnswerQuestions = navigateToAnswerQuestions
+                )
             }
+        }
+    }
+    
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        // Handle notification when app is already running
+        val intentAction = intent.getStringExtra("action")
+        if (intentAction == "answer_questions") {
+            navigateToAnswerQuestions = true
         }
     }
 }
@@ -74,13 +90,30 @@ sealed class Screen(val route: String, val title: String, val icon: ImageVector)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MoodTrackerApp(repository: MoodTrackerRepository) {
+fun MoodTrackerApp(
+    repository: MoodTrackerRepository,
+    shouldNavigateToAnswerQuestions: Boolean = false
+) {
     val navController = rememberNavController()
     val screens = listOf(Screen.Main, Screen.Logs, Screen.NotificationSchedule, Screen.Config)
     
     // Initialize default data once when app starts
     LaunchedEffect(Unit) {
         repository.initializeDefaultDataIfNeeded()
+    }
+    
+    // Navigate to Answer Questions if opened from notification
+    var hasNavigated by remember { mutableStateOf(false) }
+    LaunchedEffect(shouldNavigateToAnswerQuestions) {
+        if (shouldNavigateToAnswerQuestions && !hasNavigated) {
+            navController.navigate(Screen.AnswerQuestions.route) {
+                // Clear the back stack to main screen first
+                popUpTo(Screen.Main.route) {
+                    inclusive = false
+                }
+            }
+            hasNavigated = true
+        }
     }
     
     Scaffold(
@@ -151,10 +184,7 @@ fun MoodTrackerApp(repository: MoodTrackerRepository) {
             }
             composable(Screen.NotificationSchedule.route) {
                 NotificationScheduleScreen(
-                    repository = repository,
-                    onNavigateBack = {
-                        navController.popBackStack()
-                    }
+                    repository = repository
                 )
             }
         }

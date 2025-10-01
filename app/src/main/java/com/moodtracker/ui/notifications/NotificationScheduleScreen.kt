@@ -1,43 +1,77 @@
 package com.moodtracker.ui.notifications
 
+import android.annotation.SuppressLint
+import android.app.Activity
 import android.app.TimePickerDialog
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Notifications
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Switch
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.dp
-import com.moodtracker.R
 import com.moodtracker.data.models.NotificationSchedule
 import com.moodtracker.data.repository.MoodTrackerRepository
 import com.moodtracker.services.NotificationScheduler
+import com.moodtracker.ui.components.CardSubtitle
+import com.moodtracker.ui.components.CardTitle
+import com.moodtracker.ui.components.CommonCard
+import com.moodtracker.ui.components.InfoCard
+import com.moodtracker.ui.components.SectionTitle
+import com.moodtracker.ui.components.StandardScreenLayout
+import com.moodtracker.ui.theme.Spacing
 import com.moodtracker.utils.DataUtils
+import com.moodtracker.utils.NotificationPermissionHelper
 import kotlinx.coroutines.launch
-import kotlinx.datetime.*
-import java.util.*
+import kotlinx.datetime.Clock
+import kotlinx.datetime.DateTimeUnit
+import kotlinx.datetime.atTime
+import kotlinx.datetime.plus
+import kotlinx.datetime.toInstant
+import kotlinx.datetime.toLocalDateTime
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun NotificationScheduleScreen(
-    repository: MoodTrackerRepository,
-    onNavigateBack: () -> Unit
+    repository: MoodTrackerRepository
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val schedules by repository.getAllSchedules().collectAsState(initial = emptyList())
     
     var showAddDialog by remember { mutableStateOf(false) }
+    var showPermissionDialog by remember { mutableStateOf(false) }
     var nextNotificationTime by remember { mutableStateOf<String?>(null) }
     var timeUntilNext by remember { mutableStateOf<String?>(null) }
     
@@ -83,132 +117,81 @@ fun NotificationScheduleScreen(
         }
     }
     
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp)
-    ) {
-        // Header
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                text = "Notification Schedule",
-                style = MaterialTheme.typography.titleLarge,
-                modifier = Modifier.weight(1f)
-            )
-            IconButton(onClick = { showAddDialog = true }) {
+    StandardScreenLayout(
+        title = "Notification Schedule",
+        headerActions = {
+            IconButton(onClick = { 
+                if (!NotificationPermissionHelper.hasNotificationPermission(context)) {
+                    showPermissionDialog = true
+                } else {
+                    showAddDialog = true
+                }
+            }) {
                 Icon(Icons.Default.Add, contentDescription = "Add Schedule")
             }
         }
-        
-        Spacer(modifier = Modifier.height(16.dp))
-        
-        // Next notification info card
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.primaryContainer
-            ),
-        ) {
-            Column(
-                modifier = Modifier.padding(16.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Icon(
-                    Icons.Default.Notifications,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(32.dp)
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-                
-                if (nextNotificationTime != null) {
-                    Text(
-                        text = "Next Notification",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Text(
-                        text = nextNotificationTime!!,
-                        style = MaterialTheme.typography.headlineMedium,
-                        color = MaterialTheme.colorScheme.primary
-                    )
-                    timeUntilNext?.let { time ->
-                        Text(
-                            text = "in $time",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                } else {
-                    Text(
-                        text = "No notifications scheduled",
-                        style = MaterialTheme.typography.titleMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Text(
-                        text = "Add a schedule to get started",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            }
+    ) {
+        if (nextNotificationTime != null) {
+            InfoCard(
+                title = "Next Notification",
+                value = nextNotificationTime!!,
+                subtitle = timeUntilNext?.let { "in $it" },
+                icon = Icons.Default.Notifications
+            )
+        } else {
+            InfoCard(
+                title = "No notifications scheduled",
+                value = "Add a schedule to get started",
+                icon = Icons.Default.Notifications
+            )
         }
-        Spacer(modifier = Modifier.height(16.dp))
         
-        // Schedule list
-        Text(
-            text = "Daily Schedule",
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.Bold
-        )
+        Spacer(modifier = Modifier.height(Spacing.medium))
         
-        Spacer(modifier = Modifier.height(8.dp))
+        SectionTitle(text = "Daily Schedule")
+        
+        Spacer(modifier = Modifier.height(Spacing.small))
         
         if (schedules.isEmpty()) {
-            Card(
-                modifier = Modifier.fillMaxWidth()
-            ) {
+            CommonCard {
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(32.dp),
+                        .padding(Spacing.medium),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Icon(
                         Icons.Default.Notifications,
                         contentDescription = null,
-                        modifier = Modifier.size(48.dp),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        modifier = Modifier.size(Spacing.emptyStateIconSize),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
                     )
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Text(
+                    Spacer(modifier = Modifier.height(Spacing.medium))
+                    CardTitle(
                         text = "No schedules configured",
-                        style = MaterialTheme.typography.titleMedium,
-                        textAlign = TextAlign.Center
+                        modifier = Modifier.fillMaxWidth()
                     )
-                    Text(
+                    CardSubtitle(
                         text = "Add notification times to get daily reminders",
-                        style = MaterialTheme.typography.bodyMedium,
-                        textAlign = TextAlign.Center,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        modifier = Modifier.fillMaxWidth()
                     )
                 }
             }
         } else {
             LazyColumn(
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+                verticalArrangement = Arrangement.spacedBy(Spacing.cardSpacing)
             ) {
                 items(schedules.sortedBy { it.timeOfDay }) { schedule ->
                     ScheduleItem(
                         schedule = schedule,
                         onToggleEnabled = { enabled ->
-                            scope.launch {
-                                repository.updateScheduleEnabled(schedule.id, enabled)
-                                // Reschedule notifications
-                                NotificationScheduler.scheduleAllNotifications(context)
+                            if (!NotificationPermissionHelper.hasNotificationPermission(context)) {
+                                showPermissionDialog = true
+                            } else {
+                                scope.launch {
+                                    repository.updateScheduleEnabled(schedule.id, enabled)
+                                    NotificationScheduler.scheduleAllNotifications(context)
+                                }
                             }
                         },
                         onDelete = {
@@ -219,10 +202,13 @@ fun NotificationScheduleScreen(
                             }
                         },
                         onEdit = { newTime ->
-                            scope.launch {
-                                repository.updateSchedule(schedule.copy(timeOfDay = newTime))
-                                // Reschedule notifications
-                                NotificationScheduler.scheduleAllNotifications(context)
+                            if (!NotificationPermissionHelper.hasNotificationPermission(context)) {
+                                showPermissionDialog = true
+                            } else {
+                                scope.launch {
+                                    repository.updateSchedule(schedule.copy(timeOfDay = newTime))
+                                    NotificationScheduler.scheduleAllNotifications(context)
+                                }
                             }
                         }
                     )
@@ -236,22 +222,56 @@ fun NotificationScheduleScreen(
         AddScheduleDialog(
             onDismiss = { showAddDialog = false },
             onConfirm = { timeOfDay ->
-                scope.launch {
-                    val newSchedule = NotificationSchedule(
-                        id = DataUtils.generateId(),
-                        timeOfDay = timeOfDay,
-                        isEnabled = true
-                    )
-                    repository.insertSchedule(newSchedule)
-                    // Reschedule notifications
-                    NotificationScheduler.scheduleAllNotifications(context)
+                if (!NotificationPermissionHelper.hasNotificationPermission(context)) {
+                    showPermissionDialog = true
                     showAddDialog = false
+                } else {
+                    scope.launch {
+                        val newSchedule = NotificationSchedule(
+                            id = DataUtils.generateId(),
+                            timeOfDay = timeOfDay,
+                            isEnabled = true
+                        )
+                        repository.insertSchedule(newSchedule)
+                        NotificationScheduler.scheduleAllNotifications(context)
+                        showAddDialog = false
+                    }
+                }
+            }
+        )
+    }
+    
+    // Permission dialog
+    if (showPermissionDialog) {
+        AlertDialog(
+            onDismissRequest = { showPermissionDialog = false },
+            title = { Text("Notification Permission Required") },
+            text = { 
+                Text(
+                    "To schedule notifications, please grant notification permission in your device settings.",
+                    textAlign = TextAlign.Center
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        NotificationPermissionHelper.requestNotificationPermission(context as Activity)
+                        showPermissionDialog = false
+                    }
+                ) {
+                    Text("Grant Permission")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showPermissionDialog = false }) {
+                    Text("Cancel")
                 }
             }
         )
     }
 }
 
+@SuppressLint("DefaultLocale")
 @Composable
 fun ScheduleItem(
     schedule: NotificationSchedule,
@@ -260,22 +280,34 @@ fun ScheduleItem(
     onEdit: (String) -> Unit
 ) {
     val context = LocalContext.current
-    var showEditDialog by remember { mutableStateOf(false) }
     
-    Card(
-        modifier = Modifier.fillMaxWidth()
-    ) {
+    CommonCard {
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
+            modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Column(modifier = Modifier.weight(1f)) {
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .clickable {
+                        val timeParts = schedule.timeOfDay.split(":")
+                        TimePickerDialog(
+                            context,
+                            { _, hourOfDay, minute ->
+                                val timeString = String.format("%02d:%02d", hourOfDay, minute)
+                                onEdit(timeString)
+                            },
+                            timeParts[0].toInt(),
+                            timeParts[1].toInt(),
+                            true
+                        ).show()
+                    }
+            ) {
                 Text(
                     text = DataUtils.formatTimeOfDay(schedule.timeOfDay),
                     style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.primary
                 )
                 Text(
                     text = if (schedule.isEnabled) "Active" else "Disabled",
@@ -292,31 +324,14 @@ fun ScheduleItem(
                 onCheckedChange = onToggleEnabled
             )
             
-            IconButton(onClick = { showEditDialog = true }) {
-                Icon(Icons.Default.Notifications, contentDescription = "Edit time")
-            }
-            
             IconButton(onClick = onDelete) {
                 Icon(Icons.Default.Delete, contentDescription = "Delete schedule")
             }
         }
     }
-    
-    if (showEditDialog) {
-        TimePickerDialog(
-            context,
-            { _, hourOfDay, minute ->
-                val timeString = String.format("%02d:%02d", hourOfDay, minute)
-                onEdit(timeString)
-                showEditDialog = false
-            },
-            schedule.timeOfDay.split(":")[0].toInt(),
-            schedule.timeOfDay.split(":")[1].toInt(),
-            true
-        ).show()
-    }
 }
 
+@SuppressLint("DefaultLocale")
 @Composable
 fun AddScheduleDialog(
     onDismiss: () -> Unit,
@@ -331,7 +346,7 @@ fun AddScheduleDialog(
         text = {
             Column {
                 Text("Select a time for daily notifications:")
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(Spacing.medium))
                 
                 OutlinedButton(
                     onClick = {
@@ -349,7 +364,7 @@ fun AddScheduleDialog(
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Icon(Icons.Default.Notifications, contentDescription = null)
-                    Spacer(modifier = Modifier.width(8.dp))
+                    Spacer(modifier = Modifier.width(Spacing.small))
                     Text(DataUtils.formatTimeOfDay(selectedTime))
                 }
             }

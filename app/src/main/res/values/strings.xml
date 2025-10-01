@@ -9,8 +9,7 @@
     
     <!-- Main Screen -->
     <string name="main_title">Current Questions</string>
-    <string name="last_answer">Last answer: %1$s</string>
-    <string name="answered_at">Answered %1$s</string>
+    <string name="last_answer">Last answer (%2$s): %1$s</string>
     <string name="never_answered">Never answered</string>
     <string name="answer_questions">Answer Questions</string>
     
@@ -74,8 +73,8 @@
     <string name="data_consistency_warning">Warning: This change may affect data consistency</string>
     
     <!-- Time formatting -->
-    <string name="time_format_today">Today at %1$s</string>
-    <string name="time_format_yesterday">Yesterday at %1$s</string>
+    <string name="time_format_today">%1$s</string>
+    <string name="time_format_yesterday">yesterday, %1$s</string>
     <string name="time_format_date">%1$s at %2$s</string>
     
     <!-- Empty states -->

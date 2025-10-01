@@ -9,19 +9,20 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
-
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.moodtracker.R
 import com.moodtracker.data.models.Question
 import com.moodtracker.data.models.QuestionType
 import com.moodtracker.data.repository.MoodTrackerRepository
+import com.moodtracker.ui.components.*
+import com.moodtracker.ui.theme.Spacing
 import com.moodtracker.utils.DataUtils
 import kotlinx.coroutines.launch
 
@@ -99,22 +100,9 @@ fun QuestionListView(
 ) {
     val scope = rememberCoroutineScope()
     
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp)
-    ) {
-        // Header
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                text = stringResource(R.string.config_title),
-                style = MaterialTheme.typography.titleLarge
-            )
-            
+    StandardScreenLayout(
+        title = stringResource(R.string.config_title),
+        headerActions = {
             FloatingActionButton(
                 onClick = onAddQuestion,
                 modifier = Modifier.size(56.dp)
@@ -122,24 +110,16 @@ fun QuestionListView(
                 Icon(Icons.Default.Add, contentDescription = stringResource(R.string.add_question))
             }
         }
-        
-        Spacer(modifier = Modifier.height(16.dp))
-        
+    ) {
         if (questions.isEmpty()) {
-            Box(
-                modifier = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    text = stringResource(R.string.empty_questions),
-                    style = MaterialTheme.typography.bodyLarge,
-                    textAlign = TextAlign.Center,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
+            EmptyStateView(
+                icon = Icons.Default.Settings,
+                title = stringResource(R.string.empty_questions),
+                subtitle = "Tap the + button to add your first question"
+            )
         } else {
             LazyColumn(
-                verticalArrangement = Arrangement.spacedBy(12.dp)
+                verticalArrangement = Arrangement.spacedBy(Spacing.cardSpacing)
             ) {
                 items(questions) { question ->
                     QuestionConfigCard(
@@ -175,27 +155,11 @@ fun QuestionEditView(
     var showTypeDropdown by remember { mutableStateOf(false) }
     var showDataConsistencyWarning by remember { mutableStateOf(false) }
     
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp)
+    StandardScreenLayout(
+        title = if (isEditing) stringResource(R.string.edit_question) else stringResource(R.string.add_question),
+        onBackClick = onCancel
     ) {
-        // Header
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            IconButton(onClick = onCancel) {
-                Icon(Icons.Default.ArrowBack, contentDescription = "Back")
-            }
-            Text(
-                text = if (isEditing) stringResource(R.string.edit_question) else stringResource(R.string.add_question),
-                style = MaterialTheme.typography.titleMedium,
-                modifier = Modifier.weight(1f)
-            )
-        }
-        
-        Spacer(modifier = Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(Spacing.large))
         
         // Question text
         OutlinedTextField(
@@ -206,7 +170,7 @@ fun QuestionEditView(
             maxLines = 3
         )
         
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(Spacing.medium))
         
         // Question type
         ExposedDropdownMenuBox(
@@ -243,7 +207,7 @@ fun QuestionEditView(
             }
         }
         
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(Spacing.medium))
         
         // Options for multiple choice
         if (questionType == QuestionType.MULTIPLE_CHOICE) {
@@ -259,17 +223,15 @@ fun QuestionEditView(
         
         Spacer(modifier = Modifier.weight(1f))
         
-        // Action buttons
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
+            horizontalArrangement = Arrangement.spacedBy(Spacing.buttonSpacing)
         ) {
-            OutlinedButton(
+            SecondaryButton(
+                text = stringResource(R.string.cancel),
                 onClick = onCancel,
                 modifier = Modifier.weight(1f)
-            ) {
-                Text(stringResource(R.string.cancel))
-            }
+            )
             
             Button(
                 onClick = {
@@ -345,13 +307,8 @@ fun QuestionConfigCard(
     onDelete: () -> Unit,
     onToggleVisibility: (Boolean) -> Unit
 ) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-    ) {
-        Column(
-            modifier = Modifier.padding(16.dp)
-        ) {
+    CommonCard {
+        Column {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -360,24 +317,19 @@ fun QuestionConfigCard(
                 Column(
                     modifier = Modifier.weight(1f)
                 ) {
-                    Text(
+                    CardTitle(
                         text = question.text,
-                        style = MaterialTheme.typography.titleMedium,
-                        modifier = Modifier.padding(bottom = 4.dp)
+                        modifier = Modifier.padding(bottom = Spacing.extraSmall)
                     )
                     
-                    Text(
+                    CardCaption(
                         text = getQuestionTypeDisplayName(question.type),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(bottom = 8.dp)
+                        modifier = Modifier.padding(bottom = Spacing.small)
                     )
                     
                     if (question.type == QuestionType.MULTIPLE_CHOICE && !question.options.isNullOrEmpty()) {
-                        Text(
-                            text = "Options: ${question.options.joinToString(", ")}",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        CardCaption(
+                            text = "Options: ${question.options.joinToString(", ")}"
                         )
                     }
                 }
