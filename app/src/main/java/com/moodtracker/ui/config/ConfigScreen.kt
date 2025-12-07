@@ -6,7 +6,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Settings
@@ -185,7 +185,7 @@ fun QuestionEditView(
                 trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = showTypeDropdown) },
                 modifier = Modifier
                     .fillMaxWidth()
-                    .menuAnchor()
+                    .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable)
             )
             
             ExposedDropdownMenu(
@@ -240,7 +240,7 @@ fun QuestionEditView(
                             optionsText.split("\n").filter { it.isNotBlank() }
                         } else null
                         
-                        if (isEditing && question != null) {
+                        if (question != null) {
                             val updatedQuestion = question.copy(
                                 text = questionText,
                                 type = questionType,
