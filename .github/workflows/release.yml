@@ -22,7 +22,7 @@ jobs:
         uses: DeterminateSystems/nix-installer-action@v14
 
       - name: Setup Nix cache
-        uses: DeterminateSystems/magic-nix-cache-action@v8
+        uses: DeterminateSystems/magic-nix-cache-action@v13
 
       - name: Get version from build.gradle.kts
         id: version
