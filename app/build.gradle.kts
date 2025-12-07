@@ -16,7 +16,10 @@ android {
         versionCode = 1
         versionName = "1.0"
 
-        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        // Disable test instrumentation runner for Nix builds to avoid configuration ambiguity
+        if (System.getenv("NIX_BUILD") != "1") {
+            testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        }
         vectorDrawables {
             useSupportLibrary = true
         }
@@ -46,6 +49,16 @@ android {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
         }
     }
+
+    // For Nix builds, explicitly disable all test-related build types/variants
+    if (System.getenv("NIX_BUILD") == "1") {
+        androidComponents {
+            beforeVariants { variantBuilder ->
+                variantBuilder.enableAndroidTest = false
+                variantBuilder.enableUnitTest = false
+            }
+        }
+    }
 }
 
 dependencies {
@@ -53,7 +66,7 @@ dependencies {
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.activity.compose)
-    
+
     // Compose
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.compose.ui)
@@ -62,27 +75,29 @@ dependencies {
     implementation(libs.androidx.material3)
     implementation(libs.androidx.compose.material.icons.extended)
     implementation(libs.androidx.navigation.compose)
-    
+
     // Database
     implementation(libs.androidx.room.runtime)
     implementation(libs.androidx.room.ktx)
     ksp(libs.androidx.room.compiler)
-    
+
     // Background work
     implementation(libs.androidx.work.runtime.ktx)
-    
+
     // Date/Time handling
     implementation(libs.kotlinx.datetime)
-    
-    // Testing
-    testImplementation(libs.junit)
-    testImplementation(libs.mockito.core)
-    testImplementation(libs.mockito.kotlin)
-    testImplementation(libs.kotlinx.coroutines.test)
-    androidTestImplementation(libs.androidx.junit)
-    androidTestImplementation(libs.androidx.espresso.core)
-    androidTestImplementation(platform(libs.androidx.compose.bom))
-    androidTestImplementation(libs.androidx.compose.ui.test.junit4)
+
+    // Testing - only include when not in Nix build
+    if (System.getenv("NIX_BUILD") != "1") {
+        testImplementation(libs.junit)
+        testImplementation(libs.mockito.core)
+        testImplementation(libs.mockito.kotlin)
+        testImplementation(libs.kotlinx.coroutines.test)
+        androidTestImplementation(libs.androidx.junit)
+        androidTestImplementation(libs.androidx.espresso.core)
+        androidTestImplementation(platform(libs.androidx.compose.bom))
+        androidTestImplementation(libs.androidx.compose.ui.test.junit4)
+    }
     debugImplementation(libs.androidx.compose.ui.tooling)
     debugImplementation(libs.androidx.compose.ui.test.manifest)
 }
