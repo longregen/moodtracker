@@ -32,7 +32,7 @@ abstract class MoodTrackerDatabase : RoomDatabase() {
                     MoodTrackerDatabase::class.java,
                     "mood_tracker_database"
                 )
-                .fallbackToDestructiveMigration()
+                .fallbackToDestructiveMigration(dropAllTables = true)
                 .build()
                 INSTANCE = instance
                 instance
