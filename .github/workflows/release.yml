@@ -62,8 +62,13 @@ jobs:
           cd app/build/outputs/apk/debug
 
           for apk in *.apk; do
-            # Extract ABI from filename (e.g., app-arm64-v8a-debug.apk -> arm64-v8a)
-            if [[ $apk =~ app-(.+)-debug\.apk ]]; then
+            if [[ $apk == "app-debug.apk" ]]; then
+              # Universal APK (no ABI splits)
+              NEW_NAME="MoodTracker-${VERSION}-${SHORT_SHA}.apk"
+              mv "$apk" "$NEW_NAME"
+              echo "Renamed: $apk -> $NEW_NAME"
+            elif [[ $apk =~ app-(.+)-debug\.apk ]]; then
+              # ABI-specific APK (e.g., app-arm64-v8a-debug.apk -> arm64-v8a)
               ABI="${BASH_REMATCH[1]}"
               NEW_NAME="MoodTracker-${VERSION}-${SHORT_SHA}-${ABI}.apk"
               mv "$apk" "$NEW_NAME"
