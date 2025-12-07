@@ -9,7 +9,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.List
+import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
@@ -82,7 +82,7 @@ class MainActivity : ComponentActivity() {
 
 sealed class Screen(val route: String, val title: String, val icon: ImageVector) {
     object Main : Screen("main", "Main", Icons.Filled.Home)
-    object Logs : Screen("logs", "Logs", Icons.Filled.List)
+    object Logs : Screen("logs", "Logs", Icons.AutoMirrored.Filled.List)
     object Config : Screen("config", "Config", Icons.Filled.Settings)
     object AnswerQuestions : Screen("answer_questions", "Answer Questions", Icons.Filled.Check)
     object NotificationSchedule : Screen("notification_schedule", "Notifications", Icons.Filled.Notifications)
