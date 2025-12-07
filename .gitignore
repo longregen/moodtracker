@@ -1,3 +1,11 @@
 build
 .gradle
 
+# Nix
+result
+result-*
+.direnv
+
+# Android
+local.properties
+*.apk

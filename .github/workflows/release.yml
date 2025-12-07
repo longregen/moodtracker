@@ -1,0 +1,123 @@
+name: Build and Release
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  build-and-release:
+    name: Build APK and Create Pre-Release
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: write  # Required to create releases
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0  # Fetch all history for version info
+
+      - name: Install Nix
+        uses: DeterminateSystems/nix-installer-action@v14
+
+      - name: Setup Nix cache
+        uses: DeterminateSystems/magic-nix-cache-action@v8
+
+      - name: Get version from build.gradle.kts
+        id: version
+        run: |
+          VERSION_NAME=$(grep 'versionName = ' app/build.gradle.kts | sed 's/.*versionName = "\(.*\)".*/\1/')
+          VERSION_CODE=$(grep 'versionCode = ' app/build.gradle.kts | sed 's/.*versionCode = \(.*\)/\1/')
+          SHORT_SHA=$(git rev-parse --short HEAD)
+
+          echo "version_name=$VERSION_NAME" >> $GITHUB_OUTPUT
+          echo "version_code=$VERSION_CODE" >> $GITHUB_OUTPUT
+          echo "short_sha=$SHORT_SHA" >> $GITHUB_OUTPUT
+          echo "tag=v${VERSION_NAME}-${SHORT_SHA}" >> $GITHUB_OUTPUT
+
+      - name: Build debug APK with Nix
+        run: |
+          nix develop --command bash -c '
+            echo "Building MoodTracker v${{ steps.version.outputs.version_name }}"
+            echo "Environment setup:"
+            echo "  ANDROID_HOME: $ANDROID_HOME"
+            echo "  JAVA_HOME: $JAVA_HOME"
+
+            chmod +x ./gradlew
+
+            ./gradlew assembleDebug \
+              --parallel \
+              --build-cache \
+              --configuration-cache \
+              --no-daemon \
+              --stacktrace
+          '
+
+      - name: Rename APKs with version
+        run: |
+          VERSION="${{ steps.version.outputs.version_name }}"
+          SHORT_SHA="${{ steps.version.outputs.short_sha }}"
+
+          cd app/build/outputs/apk/debug
+
+          for apk in *.apk; do
+            # Extract ABI from filename (e.g., app-arm64-v8a-debug.apk -> arm64-v8a)
+            if [[ $apk =~ app-(.+)-debug\.apk ]]; then
+              ABI="${BASH_REMATCH[1]}"
+              NEW_NAME="MoodTracker-${VERSION}-${SHORT_SHA}-${ABI}.apk"
+              mv "$apk" "$NEW_NAME"
+              echo "Renamed: $apk -> $NEW_NAME"
+            fi
+          done
+
+          ls -lh
+
+      - name: Generate release notes
+        id: release_notes
+        run: |
+          cat > release_notes.md << EOF
+          ## MoodTracker v${{ steps.version.outputs.version_name }}
+
+          **Build:** \`${{ steps.version.outputs.short_sha }}\`
+          **Version Code:** ${{ steps.version.outputs.version_code }}
+
+          ### Installation
+
+          Download the appropriate APK for your device architecture:
+          - **arm64-v8a**: Modern 64-bit ARM devices (most recent Android phones)
+          - **armeabi-v7a**: Older 32-bit ARM devices
+          - **x86_64**: 64-bit x86 devices (emulators, some tablets)
+          - **x86**: 32-bit x86 devices (older emulators)
+          - **universal**: Works on all architectures (larger file size)
+
+          ### Changes
+
+          Built from commit [\`${{ github.sha }}\`](${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }})
+
+          ---
+
+          *This is an automated pre-release build. For production use, please wait for a stable release.*
+          EOF
+
+          cat release_notes.md
+
+      - name: Create pre-release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.version.outputs.tag }}
+          name: "MoodTracker v${{ steps.version.outputs.version_name }} (${{ steps.version.outputs.short_sha }})"
+          body_path: release_notes.md
+          draft: false
+          prerelease: true
+          files: app/build/outputs/apk/debug/MoodTracker-*.apk
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v5
+        with:
+          name: debug-apks-${{ steps.version.outputs.tag }}
+          path: app/build/outputs/apk/debug/MoodTracker-*.apk
+          compression-level: 0
+          retention-days: 30

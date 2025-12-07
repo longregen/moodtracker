@@ -1,0 +1,51 @@
+name: Build APK on PR
+
+on:
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build:
+    name: Build Debug APK
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+
+      - name: Install Nix
+        uses: DeterminateSystems/nix-installer-action@v14
+
+      - name: Setup Nix cache
+        uses: DeterminateSystems/magic-nix-cache-action@v8
+
+      - name: Build debug APK with Nix
+        run: |
+          nix develop --command bash -c '
+            echo "Environment setup:"
+            echo "  ANDROID_HOME: $ANDROID_HOME"
+            echo "  JAVA_HOME: $JAVA_HOME"
+
+            chmod +x ./gradlew
+
+            ./gradlew assembleDebug \
+              --parallel \
+              --build-cache \
+              --configuration-cache \
+              --no-daemon \
+              --stacktrace
+          '
+
+      - name: List generated APKs
+        run: |
+          echo "Generated APKs:"
+          find app/build/outputs/apk/debug -name "*.apk" -exec ls -lh {} \;
+
+      - name: Upload debug APKs
+        uses: actions/upload-artifact@v5
+        with:
+          name: debug-apks
+          path: app/build/outputs/apk/debug/*.apk
+          compression-level: 0
+          retention-days: 14
