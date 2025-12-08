@@ -1,210 +1,153 @@
-# MoodTracker Android App
+# 📱 MoodTracker
 
-A comprehensive Android application that prompts users 4-5 times daily with customizable questions to track mood, habits, and personal insights. Built with modern Android development practices using Jetpack Compose and Material Design 3.
+**Android app for tracking mood, habits, and personal metrics through scheduled daily prompts**
 
-## Features
+[![Android](https://img.shields.io/badge/Android-7.0%2B-green?logo=android)](https://developer.android.com)
+[![Kotlin](https://img.shields.io/badge/Kotlin-2.0-purple?logo=kotlin)](https://kotlinlang.org)
+[![Jetpack Compose](https://img.shields.io/badge/Jetpack%20Compose-Material3-blue)](https://developer.android.com/jetpack/compose)
 
-### Core Functionality
-- **Customizable Questions**: Create, edit, and manage different types of questions
-- **Multiple Answer Types**: Support for text, yes/no, number, and multiple-choice responses
-- **Smart Notifications**: Configurable daily notifications (4-5 times per day)
-- **Comprehensive Logging**: Three view modes for analyzing your responses
-- **Modern UI**: Material Design 3 with dark/light mode support
+---
 
-### Question Types
-1. **Text Input**: Free-form text responses
-2. **Yes/No**: Simple binary choices with optional additional notes
-3. **Number**: Numeric input for quantifiable metrics
-4. **Multiple Choice**: Pre-defined options with additional text logging
+## 🌟 Features
 
-### Notification System
-- **Scheduled Notifications**: Set up to 5 daily notification times
-- **Snooze Functionality**: Delay notifications when not convenient
-- **Background Processing**: Uses WorkManager for reliable scheduling
-- **Boot Persistence**: Notifications resume after device restart
+- **Scheduled notifications** — Configurable daily prompts at times you choose
+- **Multiple question types** — Text, yes/no, numeric, and multiple-choice
+- **Local storage** — All data stays on your device
+- **Dark/light mode** — Material Design 3 theming
+- **Persistent** — Notifications survive restarts and battery optimization
+- **Log views** — Timeline, by-question, and per-question history
 
-### Logging & Analytics
-- **Timeline View**: Chronological list of all responses
-- **Questions View**: Grouped responses by question type
-- **Particular Question View**: Deep dive into specific question history
-- **Data Versioning**: Track question modifications over time
+---
 
-### Configuration
-- **Question Management**: Add, edit, delete, and hide questions
-- **Notification Settings**: Customize notification times
-- **Data Consistency**: Warnings when modifying questions with existing data
+## ℹ️ Overview
 
-## Technical Architecture
+MoodTracker prompts you with questions throughout the day and stores your responses locally. You define the questions, answer types, and notification schedule. The app provides several views for reviewing your logged data over time.
 
-### Technology Stack
-- **Language**: Kotlin
-- **UI Framework**: Jetpack Compose with Material Design 3
-- **Database**: Room (SQLite)
-- **Background Tasks**: WorkManager
-- **Notifications**: Android Notification API
-- **Date/Time**: kotlinx-datetime
-- **Architecture**: MVVM with Repository pattern
+---
 
-### Project Structure
+## 🚀 Quick Start
+
+### Installation
+
+1. Download `app-release.apk` from [Releases](../../releases)
+2. Enable "Install from Unknown Sources" in Android settings
+3. Install and grant notification permissions
+
+**Requirements:** Android 7.0+ (API 24) • ~11MB storage
+
+### Setup
+
+1. Open the configuration tab and add questions
+2. Set notification times in settings
+3. Respond to prompts as they appear
+4. Review responses in the logs section
+
+---
+
+## 🎯 Question Examples
+
+| Question | Type | Use Case |
+|----------|------|----------|
+| "How is your mood?" | Multiple choice | Mood tracking |
+| "Did you exercise today?" | Yes/No | Habit tracking |
+| "Hours at the computer?" | Number | Time tracking |
+| "Notes for the day" | Text | Journaling |
+
+---
+
+## 🛠️ Technical Details
+
+<details>
+<summary><strong>Technology Stack</strong></summary>
+
+| Component | Technology |
+|-----------|------------|
+| Language | Kotlin |
+| UI Framework | Jetpack Compose + Material Design 3 |
+| Database | Room (SQLite) |
+| Background Tasks | WorkManager |
+| Date/Time | kotlinx-datetime |
+| Architecture | MVVM with Repository pattern |
+
+</details>
+
+<details>
+<summary><strong>Project Structure</strong></summary>
+
 ```
 app/src/main/java/com/moodtracker/
 ├── data/
 │   ├── database/          # Room database, DAOs
-│   ├── models/           # Data classes
-│   └── repository/       # Data access layer
-├── services/             # Background services, notifications
+│   ├── models/            # Data classes
+│   └── repository/        # Data access layer
+├── services/              # Background services, notifications
 ├── ui/
-│   ├── answer/          # Question answering interface
-│   ├── config/          # Configuration screens
-│   ├── logs/            # Logging and analytics
-│   ├── main/            # Main dashboard
-│   └── theme/           # UI theming
-└── utils/               # Utility functions
+│   ├── answer/            # Question answering interface
+│   ├── config/            # Configuration screens
+│   ├── logs/              # Logging and analytics
+│   ├── main/              # Main dashboard
+│   └── theme/             # UI theming
+└── utils/                 # Utility functions
 ```
 
-### Database Schema
-- **Questions**: Store question definitions, types, and options
-- **Answers**: Store user responses with timestamps
-- **NotificationSchedule**: Manage notification timing
+</details>
 
-## Installation
+<details>
+<summary><strong>Required Permissions</strong></summary>
 
-### Prerequisites
-- Android device running API level 24+ (Android 7.0)
-- Approximately 15MB of storage space
+- `POST_NOTIFICATIONS` — Display notifications
+- `SCHEDULE_EXACT_ALARM` — Precise timing
+- `RECEIVE_BOOT_COMPLETED` — Resume after restart
+- `WAKE_LOCK` — Background reliability
 
-### Installation Steps
-1. Download the `app-debug.apk` file
-2. Enable "Install from Unknown Sources" in Android settings
-3. Open the APK file and follow installation prompts
-4. Grant necessary permissions when prompted
+</details>
 
-### Required Permissions
-- **POST_NOTIFICATIONS**: Display notification prompts
-- **SCHEDULE_EXACT_ALARM**: Precise notification timing
-- **RECEIVE_BOOT_COMPLETED**: Resume notifications after restart
-- **WAKE_LOCK**: Ensure notifications work when device is sleeping
+<details>
+<summary><strong>Building from Source</strong></summary>
 
-## Usage Guide
-
-### Initial Setup
-1. **Launch the app** and review the welcome screen
-2. **Configure questions** by tapping the configuration tab
-3. **Set notification times** in the notification settings
-4. **Answer your first question** to test the system
-
-### Daily Usage
-1. **Respond to notifications** as they appear throughout the day
-2. **Use the snooze feature** if you need to delay a response
-3. **Review your progress** in the logs section
-4. **Adjust questions** as your tracking needs evolve
-
-### Question Management
-- **Add new questions**: Use the "+" button in configuration
-- **Edit existing questions**: Tap any question to modify
-- **Hide questions**: Temporarily disable without losing data
-- **Delete questions**: Permanently remove (with data warning)
-
-### Viewing Your Data
-- **Timeline**: See all responses in chronological order
-- **By Question**: Group responses to analyze patterns
-- **Individual Questions**: Deep dive into specific metrics
-
-## Customization
-
-### Question Examples
-- **Mood Tracking**: "How is your mood?" (Multiple choice: Great, Good, Okay, Poor, Terrible)
-- **Exercise**: "Have you exercised today yet?" (Yes/No with notes)
-- **Screen Time**: "How many hours were you sitting at the computer?" (Number)
-- **Reflection**: "Any reminders you would like for the future?" (Text)
-
-### Notification Timing
-- **Morning Check-in**: 9:00 AM
-- **Midday Pulse**: 1:00 PM
-- **Afternoon Reflection**: 4:00 PM
-- **Evening Review**: 7:00 PM
-- **Night Thoughts**: 9:00 PM
-
-## Development
-
-### Building from Source
 ```bash
-# Clone the repository
-git clone <repository-url>
-cd MoodTracker
+git clone https://github.com/your-username/moodtracker.git
+cd moodtracker
 
-# Set up Android SDK
-export ANDROID_HOME=/path/to/android-sdk
-export JAVA_HOME=/path/to/java-17
-
-# Build the app
+# Requires Android SDK and JDK 17+
 ./gradlew assembleDebug
 ```
 
-### Key Dependencies
-- `androidx.compose.material3:material3:1.2.0`
-- `androidx.room:room-runtime:2.6.1`
-- `androidx.work:work-runtime-ktx:2.9.0`
-- `org.jetbrains.kotlinx:kotlinx-datetime:0.5.0`
-
-### Architecture Decisions
-- **Jetpack Compose**: Modern, declarative UI framework
-- **Room Database**: Type-safe SQLite abstraction
-- **WorkManager**: Reliable background task execution
-- **Material Design 3**: Consistent, accessible design system
-
-## Privacy & Data
-
-### Data Storage
-- All data is stored locally on your device
-- No data is transmitted to external servers
-- Database is encrypted using Android's built-in security
-
-### Data Export
-- Currently, data export is not implemented
-- Future versions may include CSV/JSON export functionality
-
-## Troubleshooting
-
-### Common Issues
-1. **Notifications not appearing**: Check notification permissions and battery optimization settings
-2. **App crashes on startup**: Ensure Android version compatibility (API 24+)
-3. **Questions not saving**: Check available storage space
-
-### Performance Tips
-- **Regular cleanup**: Delete old questions you no longer need
-- **Optimize notifications**: Avoid too many daily notifications
-- **Battery settings**: Exclude app from battery optimization for reliable notifications
-
-## Future Enhancements
-
-### Planned Features
-- **Data Export**: CSV/JSON export functionality
-- **Analytics Dashboard**: Visual charts and trends
-- **Reminder Customization**: More flexible notification options
-- **Backup & Sync**: Cloud backup capabilities
-- **Widget Support**: Home screen widgets for quick responses
-
-### Contributing
-This is a demonstration project. For production use, consider:
-- Adding comprehensive unit tests
-- Implementing data encryption
-- Adding accessibility improvements
-- Optimizing for different screen sizes
-- Adding localization support
-
-## License
-
-This project is created as a demonstration of Android development capabilities. Feel free to use and modify as needed.
-
-## Support
-
-For technical questions or issues, please refer to the troubleshooting section above or consult Android development documentation for similar implementations.
+</details>
 
 ---
 
-**Version**: 1.0.0  
-**Build Date**: September 28, 2025  
-**Target SDK**: Android 14 (API 34)  
-**Minimum SDK**: Android 7.0 (API 24)  
-**APK Size**: ~11MB
+## 🔒 Privacy
+
+- All data stored locally on device
+- No external servers or analytics
+- No account required
+
+---
+
+## 🗺️ Roadmap
+
+- [ ] Data export (CSV/JSON)
+- [ ] Analytics dashboard with charts
+- [ ] Cloud backup & sync
+- [ ] Home screen widgets
+- [ ] Localization
+
+---
+
+## 💭 Contributing
+
+- **Issues** — Report bugs or request features via [GitHub Issues](../../issues)
+- **Pull Requests** — Contributions welcome
+
+---
+
+## 📄 License
+
+Open source. Free to use and modify.
+
+---
+
+<p align="center">
+  <strong>Version 1.0.0</strong> • Android 7.0+ • ~11MB
+</p>
