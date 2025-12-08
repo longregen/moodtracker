@@ -1,6 +1,6 @@
 # 📱 MoodTracker
 
-**A mindful Android companion for tracking your daily mood, habits, and personal insights**
+**Android app for tracking mood, habits, and personal metrics through scheduled daily prompts**
 
 [![Android](https://img.shields.io/badge/Android-7.0%2B-green?logo=android)](https://developer.android.com)
 [![Kotlin](https://img.shields.io/badge/Kotlin-2.0-purple?logo=kotlin)](https://kotlinlang.org)
@@ -8,22 +8,20 @@
 
 ---
 
-## 🌟 Highlights
+## 🌟 Features
 
-- **Gentle reminders** — 4-5 customizable daily prompts to check in with yourself
-- **Flexible questions** — Text, yes/no, numeric, or multiple-choice answer types
-- **Privacy-first** — All data stays on your device, never uploaded anywhere
-- **Beautiful UI** — Modern Material Design 3 with dark/light mode support
-- **Reliable** — Notifications persist through restarts and battery optimization
-- **Insightful** — Multiple views to analyze patterns and track progress over time
+- **Scheduled notifications** — Configurable daily prompts at times you choose
+- **Multiple question types** — Text, yes/no, numeric, and multiple-choice
+- **Local storage** — All data stays on your device
+- **Dark/light mode** — Material Design 3 theming
+- **Persistent** — Notifications survive restarts and battery optimization
+- **Log views** — Timeline, by-question, and per-question history
 
 ---
 
 ## ℹ️ Overview
 
-MoodTracker is designed to help you build self-awareness through brief, consistent check-ins throughout your day. Whether you're tracking mood, exercise, sleep quality, or any personal metric, the app provides a simple yet powerful framework for reflection.
-
-Rather than overwhelming you with complex analytics, MoodTracker focuses on making it easy to capture moments and review them later—helping you notice patterns you might otherwise miss.
+MoodTracker prompts you with questions throughout the day and stores your responses locally. You define the questions, answer types, and notification schedule. The app provides several views for reviewing your logged data over time.
 
 ---
 
@@ -31,54 +29,29 @@ Rather than overwhelming you with complex analytics, MoodTracker focuses on maki
 
 ### Installation
 
-1. Download the latest `app-release.apk` from [Releases](../../releases)
-2. Enable "Install from Unknown Sources" in your Android settings
-3. Open the APK and follow the prompts
-4. Grant notification permissions when asked
+1. Download `app-release.apk` from [Releases](../../releases)
+2. Enable "Install from Unknown Sources" in Android settings
+3. Install and grant notification permissions
 
 **Requirements:** Android 7.0+ (API 24) • ~11MB storage
 
-### First Steps
+### Setup
 
-1. **Add your questions** — Tap the configuration tab and create questions that matter to you
-2. **Set your schedule** — Choose up to 5 notification times throughout your day
-3. **Respond & reflect** — Answer prompts as they come, snooze if you're busy
-4. **Review your journey** — Explore the logs to discover patterns
-
----
-
-## 📸 Screenshots
-
-<!-- Add screenshots here -->
-*Coming soon: Screenshots showcasing the main interface, question types, and analytics views*
+1. Open the configuration tab and add questions
+2. Set notification times in settings
+3. Respond to prompts as they appear
+4. Review responses in the logs section
 
 ---
 
 ## 🎯 Question Examples
 
-Get started with questions like these:
-
-| Question | Type | Purpose |
-|----------|------|---------|
-| "How is your mood right now?" | Multiple choice | Track emotional patterns |
-| "Did you exercise today?" | Yes/No | Build habit awareness |
-| "Hours at the computer?" | Number | Monitor screen time |
-| "What are you grateful for?" | Text | Practice gratitude |
-| "Energy level (1-10)?" | Number | Track vitality |
-
----
-
-## 🔔 Notification Schedule
-
-Suggested check-in times for balanced self-reflection:
-
-- **9:00 AM** — Morning intention
-- **1:00 PM** — Midday pulse
-- **4:00 PM** — Afternoon reflection
-- **7:00 PM** — Evening review
-- **9:00 PM** — Night thoughts
-
-*Customize these times in Settings to match your routine.*
+| Question | Type | Use Case |
+|----------|------|----------|
+| "How is your mood?" | Multiple choice | Mood tracking |
+| "Did you exercise today?" | Yes/No | Habit tracking |
+| "Hours at the computer?" | Number | Time tracking |
+| "Notes for the day" | Text | Journaling |
 
 ---
 
@@ -122,10 +95,10 @@ app/src/main/java/com/moodtracker/
 <details>
 <summary><strong>Required Permissions</strong></summary>
 
-- `POST_NOTIFICATIONS` — Display notification prompts
-- `SCHEDULE_EXACT_ALARM` — Precise notification timing
+- `POST_NOTIFICATIONS` — Display notifications
+- `SCHEDULE_EXACT_ALARM` — Precise timing
 - `RECEIVE_BOOT_COMPLETED` — Resume after restart
-- `WAKE_LOCK` — Ensure reliability when device sleeps
+- `WAKE_LOCK` — Background reliability
 
 </details>
 
@@ -146,58 +119,32 @@ cd moodtracker
 
 ## 🔒 Privacy
 
-Your data belongs to you:
-
-- ✅ All data stored locally on your device
-- ✅ No external servers or analytics
-- ✅ No account required
-- ✅ Database secured by Android's built-in encryption
+- All data stored locally on device
+- No external servers or analytics
+- No account required
 
 ---
 
 ## 🗺️ Roadmap
 
 - [ ] Data export (CSV/JSON)
-- [ ] Visual analytics dashboard with charts
-- [ ] Cloud backup & sync (optional)
+- [ ] Analytics dashboard with charts
+- [ ] Cloud backup & sync
 - [ ] Home screen widgets
-- [ ] Localization support
+- [ ] Localization
 
 ---
 
-## 💭 Feedback & Contributing
-
-Found a bug? Have an idea? Contributions are welcome!
+## 💭 Contributing
 
 - **Issues** — Report bugs or request features via [GitHub Issues](../../issues)
-- **Pull Requests** — See our contribution guidelines before submitting
-- **Discussions** — Share how you use MoodTracker and what works for you
-
----
-
-## 📖 Troubleshooting
-
-<details>
-<summary><strong>Notifications not appearing?</strong></summary>
-
-1. Check notification permissions in Settings > Apps > MoodTracker
-2. Disable battery optimization for the app
-3. Ensure "Do Not Disturb" isn't blocking alerts
-
-</details>
-
-<details>
-<summary><strong>App crashes on startup?</strong></summary>
-
-Ensure your device runs Android 7.0 or higher. If issues persist, try clearing app data and reinstalling.
-
-</details>
+- **Pull Requests** — Contributions welcome
 
 ---
 
 ## 📄 License
 
-This project is open source. Feel free to use, modify, and share.
+Open source. Free to use and modify.
 
 ---
 
