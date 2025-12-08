@@ -1,11 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <data-extraction-rules>
     <cloud-backup>
-        <!-- Exclude specific files or directories from cloud backup -->
-        <!-- <exclude domain="file" path="no_backup/" /> -->
+        <!-- Include database and shared preferences for cloud backup -->
+        <include domain="database" path="mood_database" />
+        <include domain="sharedpref" path="." />
     </cloud-backup>
     <device-transfer>
-        <!-- Exclude specific files or directories from device transfer -->
-        <!-- <exclude domain="file" path="no_transfer/" /> -->
+        <!-- Include database and shared preferences for device transfer -->
+        <include domain="database" path="mood_database" />
+        <include domain="sharedpref" path="." />
     </device-transfer>
 </data-extraction-rules>

@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <full-backup-content>
-    <!-- Exclude specific files or directories from backup -->
-    <!-- <exclude domain="file" path="no_backup/" /> -->
+    <!-- Include database for backup -->
+    <include domain="database" path="mood_database" />
+    <include domain="sharedpref" path="." />
 </full-backup-content>
