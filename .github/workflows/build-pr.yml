@@ -43,7 +43,7 @@ jobs:
           find app/build/outputs/apk/debug -name "*.apk" -exec ls -lh {} \;
 
       - name: Upload debug APKs
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         with:
           name: debug-apks
           path: app/build/outputs/apk/debug/*.apk
