@@ -622,19 +622,19 @@ fun TimelineAnswerCard(
     answer: Answer,
     question: Question
 ) {
-    CommonCard {
+    CommonCard(showGradientAccent = true) {
         Text(
             text = question.text,
             style = MaterialTheme.typography.titleSmall,
             modifier = Modifier.padding(bottom = Spacing.small)
         )
-        
+
         Text(
             text = "${UIUtils.formatTimeOnly(answer.timestamp)}: ${answer.answerText}",
             style = MaterialTheme.typography.bodyLarge,
             modifier = Modifier.padding(bottom = Spacing.small)
         )
-        
+
         if (!answer.additionalNotes.isNullOrBlank()) {
             CardSubtitle(
                 text = "Notes: ${answer.additionalNotes}",
@@ -653,13 +653,16 @@ fun QuestionSummaryCard(
 ) {
     val recentAnswers by repository.getRecentAnswersForQuestion(question.id, answersLimit)
         .collectAsState(initial = emptyList())
-    
-    CommonCard(onClick = onClick) {
+
+    CommonCard(
+        onClick = onClick,
+        showGradientAccent = true
+    ) {
         CardTitle(
             text = question.text,
             modifier = Modifier.padding(bottom = Spacing.cardSpacing)
         )
-            
+
         if (recentAnswers.isEmpty()) {
             CardSubtitle(
                 text = stringResource(R.string.never_answered)
@@ -669,14 +672,14 @@ fun QuestionSummaryCard(
                 text = "Last ${recentAnswers.size} answers:",
                 modifier = Modifier.padding(bottom = Spacing.small)
             )
-            
+
             recentAnswers.take(3).forEach { answer ->
                 CardCaption(
                     text = "• ${answer.answerText} (${UIUtils.formatAnswerTime(answer.timestamp)})",
                     modifier = Modifier.padding(bottom = Spacing.extraSmall)
                 )
             }
-            
+
             if (recentAnswers.size > 3) {
                 CardCaption(
                     text = "... and ${recentAnswers.size - 3} more"
@@ -690,20 +693,20 @@ fun QuestionSummaryCard(
 fun AnswerCard(
     answer: Answer
 ) {
-    CommonCard {
+    CommonCard(showGradientAccent = true) {
         Text(
             text = answer.answerText,
             style = MaterialTheme.typography.bodyLarge,
             modifier = Modifier.padding(bottom = Spacing.small)
         )
-        
+
         if (!answer.additionalNotes.isNullOrBlank()) {
             CardSubtitle(
                 text = "Notes: ${answer.additionalNotes}",
                 modifier = Modifier.padding(bottom = Spacing.small)
             )
         }
-        
+
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween
@@ -711,7 +714,7 @@ fun AnswerCard(
             CardCaption(
                 text = UIUtils.formatAnswerTime(answer.timestamp)
             )
-            
+
             if (answer.wasSnooze) {
                 Text(
                     text = "Snoozed",

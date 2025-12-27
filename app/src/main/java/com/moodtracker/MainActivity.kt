@@ -1,5 +1,6 @@
 package com.moodtracker
 
+import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -31,15 +32,21 @@ import com.moodtracker.ui.config.ConfigScreen
 import com.moodtracker.ui.logs.LogsScreen
 import com.moodtracker.ui.main.MainScreen
 import com.moodtracker.ui.notifications.NotificationScheduleScreen
+import com.moodtracker.ui.theme.AppTheme
 import com.moodtracker.ui.theme.MoodTrackerTheme
 
 class MainActivity : ComponentActivity() {
     private lateinit var repository: MoodTrackerRepository
     private var navigateToAnswerQuestions by mutableStateOf(false)
 
+    companion object {
+        private const val PREFS_NAME = "mood_tracker_prefs"
+        private const val THEME_KEY = "app_theme"
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        
+
         val database = MoodTrackerDatabase.getDatabase(this)
         repository = MoodTrackerRepository(
             database.questionDao(),
@@ -49,25 +56,50 @@ class MainActivity : ComponentActivity() {
 
         // Initialize notification channel
         NotificationService.createNotificationChannel(this)
-        
+
         // Schedule notifications
         NotificationScheduler.scheduleAllNotifications(this)
-        
+
         // Start WorkManager for periodic notification scheduling
         com.moodtracker.services.NotificationWorker.schedulePeriodicWork(this)
 
         // Check if app was opened from a notification
         val intentAction = intent?.getStringExtra("action")
         navigateToAnswerQuestions = intentAction == "answer_questions"
-        
+
+        // Load saved theme
+        val savedTheme = loadTheme()
+
         setContent {
-            MoodTrackerTheme {
+            var currentTheme by remember { mutableStateOf(savedTheme) }
+
+            MoodTrackerTheme(appTheme = currentTheme) {
                 MoodTrackerApp(
                     repository = repository,
-                    shouldNavigateToAnswerQuestions = navigateToAnswerQuestions
+                    shouldNavigateToAnswerQuestions = navigateToAnswerQuestions,
+                    currentTheme = currentTheme,
+                    onThemeChange = { newTheme ->
+                        currentTheme = newTheme
+                        saveTheme(newTheme)
+                    }
                 )
             }
         }
+    }
+
+    private fun loadTheme(): AppTheme {
+        val prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        val themeName = prefs.getString(THEME_KEY, AppTheme.SERENITY.name) ?: AppTheme.SERENITY.name
+        return try {
+            AppTheme.valueOf(themeName)
+        } catch (e: IllegalArgumentException) {
+            AppTheme.SERENITY
+        }
+    }
+
+    private fun saveTheme(theme: AppTheme) {
+        val prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().putString(THEME_KEY, theme.name).apply()
     }
     
     override fun onNewIntent(intent: Intent) {
@@ -92,7 +124,9 @@ sealed class Screen(val route: String, val title: String, val icon: ImageVector)
 @Composable
 fun MoodTrackerApp(
     repository: MoodTrackerRepository,
-    shouldNavigateToAnswerQuestions: Boolean = false
+    shouldNavigateToAnswerQuestions: Boolean = false,
+    currentTheme: AppTheme = AppTheme.SERENITY,
+    onThemeChange: (AppTheme) -> Unit = {}
 ) {
     val navController = rememberNavController()
     val screens = listOf(Screen.Main, Screen.Logs, Screen.NotificationSchedule, Screen.Config)
@@ -162,7 +196,11 @@ fun MoodTrackerApp(
                 LogsScreen(repository = repository)
             }
             composable(Screen.Config.route) {
-                ConfigScreen(repository = repository)
+                ConfigScreen(
+                    repository = repository,
+                    currentTheme = currentTheme,
+                    onThemeChange = onThemeChange
+                )
             }
             composable(Screen.AnswerQuestions.route) {
                 AnswerQuestionsScreen(
