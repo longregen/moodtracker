@@ -1,0 +1,403 @@
+name: E2E Test
+
+on:
+  workflow_call:
+    inputs:
+      artifact-name-prefix:
+        description: 'Prefix for artifact names (e.g., "ci" or "release")'
+        required: false
+        type: string
+        default: 'e2e'
+
+jobs:
+  e2e-test:
+    name: Run E2E Tests on Android Emulator
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    permissions:
+      contents: write
+      pull-requests: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Install Nix
+        uses: DeterminateSystems/nix-installer-action@v21
+
+      - name: Setup Nix cache
+        uses: DeterminateSystems/magic-nix-cache-action@v13
+
+      - name: Build debug APK
+        run: |
+          nix develop --command bash -c '
+            echo "Building MoodTracker APK for E2E tests"
+            echo "Environment setup:"
+            echo "  ANDROID_HOME: $ANDROID_HOME"
+            echo "  JAVA_HOME: $JAVA_HOME"
+
+            chmod +x ./gradlew
+
+            ./gradlew assembleDebug \
+              --parallel \
+              --build-cache \
+              --configuration-cache \
+              --no-daemon \
+              --stacktrace
+          '
+
+      - name: Enable KVM group perms
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: AVD cache
+        uses: actions/cache@v4
+        id: avd-cache
+        with:
+          path: |
+            ~/.android/avd/*
+            ~/.android/adb*
+          key: avd-e2e-33-google_apis-x86_64
+
+      - name: Create AVD and generate snapshot for caching
+        if: steps.avd-cache.outputs.cache-hit != 'true'
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 33
+          target: google_apis
+          arch: x86_64
+          force-avd-creation: false
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          disable-animations: false
+          script: |
+            echo "Waiting for all Android services to be ready..."
+            adb wait-for-device
+            adb shell 'while [ "$(getprop sys.boot_completed)" != "1" ]; do sleep 2; done'
+            adb shell 'while [ -z "$(pm list packages)" ]; do sleep 1; done'
+            adb shell 'while [ "$(getprop init.svc.bootanim)" != "stopped" ]; do sleep 1; done'
+            echo "Boot completed. Waiting for input service..."
+            i=0; while [ $i -lt 30 ]; do if adb shell service check input 2>/dev/null | grep -q "Service input:"; then echo "Input service is ready"; break; fi; echo "Waiting for input service... ($i/30)"; sleep 2; i=$((i+1)); done
+            echo "Waiting for settings service..."
+            i=0; while [ $i -lt 30 ]; do if adb shell service check settings 2>/dev/null | grep -q "Service settings:"; then echo "Settings service is ready"; break; fi; echo "Waiting for settings service... ($i/30)"; sleep 2; i=$((i+1)); done
+            echo "Adding 5 second stabilization period..."
+            sleep 5
+            echo "All services ready. Generated AVD snapshot for caching."
+
+      - name: Create screenshot script
+        run: |
+          cat > take-screenshots.sh << 'SCRIPT_EOF'
+          #!/bin/bash
+          set -e
+
+          echo "=== Starting MoodTracker E2E Test Script ==="
+
+          # Get the APK path
+          APK_PATH=$(find app/build/outputs/apk/debug -name "app-x86_64-debug.apk" 2>/dev/null | head -n 1)
+          [ -z "$APK_PATH" ] && APK_PATH=$(find app/build/outputs/apk/debug -name "app-debug.apk" 2>/dev/null | head -n 1)
+          [ -z "$APK_PATH" ] && APK_PATH=$(find app/build/outputs/apk/debug -name "*.apk" 2>/dev/null | head -n 1)
+
+          if [ -z "$APK_PATH" ]; then
+            echo "Error: No APK found"
+            ls -la app/build/outputs/apk/debug/ || echo "apk directory not found"
+            exit 1
+          fi
+
+          echo "Using APK: $APK_PATH"
+
+          # Wait for emulator to be ready
+          echo "Waiting for emulator to boot..."
+          adb wait-for-device
+          adb shell 'while [ "$(getprop sys.boot_completed)" != "1" ]; do sleep 2; done'
+          adb shell 'while [ -z "$(pm list packages)" ]; do sleep 1; done'
+          adb shell 'while [ "$(getprop init.svc.bootanim)" != "stopped" ]; do sleep 1; done'
+
+          echo "Waiting for input service..."
+          i=0; while [ $i -lt 30 ]; do
+            if adb shell service check input 2>/dev/null | grep -q "Service input:"; then
+              echo "Input service is ready"
+              break
+            fi
+            echo "Waiting for input service... ($i/30)"
+            sleep 2
+            i=$((i+1))
+          done
+
+          echo "Adding stabilization period..."
+          sleep 5
+
+          # Configure emulator settings
+          echo "Configuring emulator settings..."
+          adb shell settings put global window_animation_scale 0.0
+          adb shell settings put global transition_animation_scale 0.0
+          adb shell settings put global animator_duration_scale 0.0
+          adb shell settings put system screen_off_timeout 600000
+
+          # Uninstall existing app if present
+          echo "Uninstalling existing app (if any)..."
+          adb uninstall com.moodtracker || echo "No existing app to uninstall"
+
+          # Install the APK
+          echo "Installing APK..."
+          adb install -r "$APK_PATH"
+
+          # Grant necessary permissions
+          echo "Granting permissions..."
+          adb shell pm grant com.moodtracker android.permission.POST_NOTIFICATIONS || true
+          adb shell pm grant com.moodtracker android.permission.SCHEDULE_EXACT_ALARM || true
+
+          # Create screenshots directory
+          mkdir -p screenshots
+
+          # Ensure screen is on
+          adb shell input keyevent KEYCODE_WAKEUP
+          sleep 1
+
+          # Launch the app
+          echo "Launching app..."
+          adb shell am start -n com.moodtracker/.MainActivity -a android.intent.action.MAIN -c android.intent.category.LAUNCHER
+
+          # Wait for app to fully load
+          echo "Waiting for app to load..."
+          sleep 8
+
+          # Screenshot 1: Main Screen (default landing screen)
+          echo "Taking screenshot of Main screen..."
+          adb shell screencap -p /sdcard/main_screen.png
+          adb pull /sdcard/main_screen.png screenshots/main_screen.png
+          sleep 2
+
+          # Get screen dimensions for calculating tap positions
+          SCREEN_SIZE=$(adb shell wm size | grep -oP 'Physical size: \K.*')
+          echo "Screen size: $SCREEN_SIZE"
+          WIDTH=$(echo $SCREEN_SIZE | cut -d'x' -f1)
+          HEIGHT=$(echo $SCREEN_SIZE | cut -d'x' -f2)
+
+          # Calculate bottom navigation positions
+          NAV_Y=$((HEIGHT - 120))
+
+          # Tab positions (divided into 4 equal sections)
+          TAB1_X=$((WIDTH / 8))
+          TAB2_X=$((3 * WIDTH / 8))
+          TAB3_X=$((5 * WIDTH / 8))
+          TAB4_X=$((7 * WIDTH / 8))
+
+          echo "Navigation Y position: $NAV_Y"
+          echo "Tab positions - Main: $TAB1_X, Logs: $TAB2_X, Notifications: $TAB3_X, Config: $TAB4_X"
+
+          # Screenshot 2: Logs Screen
+          echo "Navigating to Logs screen..."
+          adb shell input tap $TAB2_X $NAV_Y
+          sleep 3
+          echo "Taking screenshot of Logs screen..."
+          adb shell screencap -p /sdcard/logs_screen.png
+          adb pull /sdcard/logs_screen.png screenshots/logs_screen.png
+          sleep 2
+
+          # Screenshot 3: Notifications Screen
+          echo "Navigating to Notifications screen..."
+          adb shell input tap $TAB3_X $NAV_Y
+          sleep 3
+          echo "Taking screenshot of Notifications screen..."
+          adb shell screencap -p /sdcard/notifications_screen.png
+          adb pull /sdcard/notifications_screen.png screenshots/notifications_screen.png
+          sleep 2
+
+          # Screenshot 4: Config Screen
+          echo "Navigating to Config screen..."
+          adb shell input tap $TAB4_X $NAV_Y
+          sleep 3
+          echo "Taking screenshot of Config screen..."
+          adb shell screencap -p /sdcard/config_screen.png
+          adb pull /sdcard/config_screen.png screenshots/config_screen.png
+          sleep 2
+
+          # Return to Main screen
+          echo "Returning to Main screen..."
+          adb shell input tap $TAB1_X $NAV_Y
+          sleep 2
+
+          # Cleanup screenshots from device
+          adb shell rm /sdcard/*.png
+
+          echo "=== E2E Test Script Completed ==="
+          ls -lh screenshots/
+          SCRIPT_EOF
+          chmod +x take-screenshots.sh
+
+      - name: Run E2E tests on Android Emulator
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 33
+          target: google_apis
+          arch: x86_64
+          profile: pixel_6
+          force-avd-creation: false
+          emulator-options: -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          disable-animations: true
+          script: ./take-screenshots.sh
+
+      - name: Compare and update reference screenshot
+        if: always() && hashFiles('screenshots/main_screen.png') != ''
+        run: |
+          set -x
+          SCREENSHOT_NEW="screenshots/main_screen.png"
+          SCREENSHOT_REF="images/main-view.png"
+
+          # Check if new screenshot exists
+          if [ ! -f "$SCREENSHOT_NEW" ]; then
+            echo "No new screenshot found, skipping comparison"
+            exit 0
+          fi
+
+          # Strip metadata from new screenshot to ensure consistent storage
+          echo "Stripping metadata from new screenshot..."
+          sudo apt-get update -qq && sudo apt-get install -y -qq optipng > /dev/null 2>&1
+
+          # Create normalized version without metadata
+          SCREENSHOT_NEW_NORMALIZED="screenshots/main_screen_normalized.png"
+          cp "$SCREENSHOT_NEW" "$SCREENSHOT_NEW_NORMALIZED"
+          optipng -strip all "$SCREENSHOT_NEW_NORMALIZED" 2>/dev/null || echo "optipng failed, using original"
+
+          # If optipng succeeded, use normalized version
+          if [ -f "$SCREENSHOT_NEW_NORMALIZED" ]; then
+            SCREENSHOT_NEW="$SCREENSHOT_NEW_NORMALIZED"
+          fi
+
+          # Check if reference exists and compute hashes for logging
+          if [ -f "$SCREENSHOT_REF" ]; then
+            echo "Current reference SHA256: $(sha256sum "$SCREENSHOT_REF" | cut -d' ' -f1)"
+            echo "New screenshot SHA256: $(sha256sum "$SCREENSHOT_NEW" | cut -d' ' -f1)"
+
+            # Compare images using SSIM (Structural Similarity Index)
+            echo "Comparing images using SSIM..."
+            sudo apt-get install -y -qq imagemagick > /dev/null 2>&1
+            SSIM_OUTPUT=$(compare -metric SSIM "$SCREENSHOT_REF" "$SCREENSHOT_NEW" null: 2>&1 || true)
+            echo "SSIM output: $SSIM_OUTPUT"
+
+            # Parse SSIM output
+            if echo "$SSIM_OUTPUT" | grep -q '('; then
+              SSIM_ERROR=$(echo "$SSIM_OUTPUT" | sed 's/.*(\([0-9.]*\)).*/\1/')
+              echo "SSIM error (from parentheses): $SSIM_ERROR"
+            else
+              SSIM_VALUE=$(echo "$SSIM_OUTPUT" | grep -oE '^[0-9.]+' | head -1)
+              SSIM_ERROR=$(echo "$SSIM_VALUE" | awk '{printf "%.6f", 1 - $1}')
+              echo "SSIM value: $SSIM_VALUE, error (1 - value): $SSIM_ERROR"
+            fi
+
+            # Check if error is below 2% threshold (0.02) meaning 98%+ similar
+            if echo "$SSIM_ERROR" | awk '{exit ($1 <= 0.02) ? 0 : 1}'; then
+              SIMILARITY_PCT=$(echo "$SSIM_ERROR" | awk '{printf "%.2f", (1 - $1) * 100}')
+              echo "Images are ${SIMILARITY_PCT}% similar (error=$SSIM_ERROR), skipping PR creation"
+              exit 0
+            else
+              SIMILARITY_PCT=$(echo "$SSIM_ERROR" | awk '{printf "%.2f", (1 - $1) * 100}')
+              echo "Images differ significantly (${SIMILARITY_PCT}% similar, error=$SSIM_ERROR), will create PR to update reference"
+            fi
+          else
+            echo "No reference screenshot found - will create initial version"
+          fi
+
+          # Create update branch
+          BRANCH_NAME="ci/update-main-view-screenshot-${{ github.run_id }}"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          # Fetch latest refs to check remote state
+          git fetch origin
+
+          # Delete remote branch if it already exists
+          git push origin --delete "$BRANCH_NAME" 2>/dev/null || echo "Branch doesn't exist remotely yet"
+
+          # Create and switch to new branch from the current commit
+          git checkout -b "$BRANCH_NAME"
+
+          # Copy normalized screenshot to reference location
+          mkdir -p images
+          cp "$SCREENSHOT_NEW" "$SCREENSHOT_REF"
+
+          # Verify the file is normalized
+          echo "Reference screenshot size: $(wc -c < "$SCREENSHOT_REF") bytes"
+
+          # Commit the change
+          git add "$SCREENSHOT_REF"
+          git commit -m "ci: Update main view reference screenshot
+
+          Automated update from E2E test run ${{ github.run_id }}
+
+          Source: ${{ github.ref }}
+          Workflow: ${{ github.workflow }}
+          Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+
+          # Push the branch
+          git push -u origin "$BRANCH_NAME" --force
+
+          # Create PR using GitHub CLI
+          echo "Attempting to create pull request..."
+          if gh pr create \
+            --title "Update main view reference screenshot" \
+            --body "## Screenshot Update from E2E Tests
+
+          The main view screenshot from the latest E2E test run.
+
+          **Details:**
+          - Workflow: \`${{ github.workflow }}\`
+          - Run ID: \`${{ github.run_id }}\`
+          - Source Branch: \`${{ github.ref }}\`
+          - Test Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+
+          ### Review:
+          1. Review the visual appearance in this PR
+          2. If the screenshot looks correct, merge this PR
+          3. If there are issues, investigate the test run
+
+          View the screenshot directly: [\`images/main-view.png\`](/${{ github.repository }}/blob/$BRANCH_NAME/images/main-view.png)
+
+          **Note:** Minor differences (like timestamps) are expected." \
+            --base "${{ github.event.repository.default_branch || 'main' }}" \
+            --head "$BRANCH_NAME" \
+            --label "automated" \
+            --label "screenshots" 2>&1; then
+            echo "PR created successfully"
+          else
+            echo "Could not create PR automatically. This may be due to repository permissions."
+            echo "Branch '$BRANCH_NAME' has been pushed with the updated screenshot."
+            echo "Create PR manually at: ${{ github.server_url }}/${{ github.repository }}/pull/new/$BRANCH_NAME"
+          fi
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+      - name: Verify screenshots were created
+        if: always()
+        run: |
+          echo "Verifying screenshots..."
+          ls -lh screenshots/ || echo "No screenshots directory"
+
+          # Check if screenshots exist
+          for screen in main_screen logs_screen notifications_screen config_screen; do
+            if [ -f "screenshots/${screen}.png" ]; then
+              echo "✓ ${screen}.png exists ($(du -h screenshots/${screen}.png | cut -f1))"
+            else
+              echo "✗ ${screen}.png was not created"
+            fi
+          done
+
+      - name: Upload main view screenshot
+        if: always()
+        uses: actions/upload-artifact@v5
+        with:
+          name: ${{ inputs.artifact-name-prefix }}-main-view
+          path: screenshots/main_screen.png
+          compression-level: 0
+          if-no-files-found: warn
+          retention-days: 30
+
+      - name: Upload all screenshots
+        if: always()
+        uses: actions/upload-artifact@v5
+        with:
+          name: ${{ inputs.artifact-name-prefix }}-screenshots
+          path: screenshots/
+          retention-days: 30
+          if-no-files-found: warn

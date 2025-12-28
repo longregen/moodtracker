@@ -1,0 +1,155 @@
+name: Publish Release
+
+on:
+  workflow_run:
+    workflows: ["CI - Build and Test"]
+    types:
+      - completed
+    branches:
+      - main
+
+jobs:
+  publish-release:
+    name: Build and Publish Release
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    # Only run if CI succeeded AND commit message starts with "release:"
+    if: >
+      github.event.workflow_run.conclusion == 'success' &&
+      startsWith(github.event.workflow_run.head_commit.message, 'release:')
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+          fetch-depth: 0
+
+      - name: Get version from build.gradle.kts
+        id: version
+        run: |
+          VERSION_NAME=$(grep 'versionName = ' app/build.gradle.kts | sed 's/.*versionName = "\(.*\)".*/\1/')
+          VERSION_CODE=$(grep 'versionCode = ' app/build.gradle.kts | sed 's/.*versionCode = \(.*\)/\1/')
+
+          echo "version_name=$VERSION_NAME" >> $GITHUB_OUTPUT
+          echo "version_code=$VERSION_CODE" >> $GITHUB_OUTPUT
+          echo "tag=v${VERSION_NAME}" >> $GITHUB_OUTPUT
+
+          echo "Version: $VERSION_NAME (code: $VERSION_CODE)"
+
+      - name: Check if tag already exists
+        id: check_tag
+        run: |
+          NEW_TAG="${{ steps.version.outputs.tag }}"
+          if git rev-parse "$NEW_TAG" >/dev/null 2>&1; then
+            echo "Tag $NEW_TAG already exists, skipping release"
+            echo "exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "Tag $NEW_TAG does not exist, proceeding with release"
+            echo "exists=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Install Nix
+        if: steps.check_tag.outputs.exists != 'true'
+        uses: DeterminateSystems/nix-installer-action@v21
+
+      - name: Setup Nix cache
+        if: steps.check_tag.outputs.exists != 'true'
+        uses: DeterminateSystems/magic-nix-cache-action@v13
+
+      - name: Build debug APK
+        if: steps.check_tag.outputs.exists != 'true'
+        run: |
+          nix develop --command bash -c '
+            echo "Building MoodTracker v${{ steps.version.outputs.version_name }}"
+            echo "Environment setup:"
+            echo "  ANDROID_HOME: $ANDROID_HOME"
+            echo "  JAVA_HOME: $JAVA_HOME"
+
+            chmod +x ./gradlew
+
+            ./gradlew assembleDebug \
+              --parallel \
+              --build-cache \
+              --configuration-cache \
+              --no-daemon \
+              --stacktrace
+          '
+
+      - name: Rename APKs with version
+        if: steps.check_tag.outputs.exists != 'true'
+        run: |
+          VERSION="${{ steps.version.outputs.version_name }}"
+
+          cd app/build/outputs/apk/debug
+
+          for apk in *.apk; do
+            if [[ $apk == "app-debug.apk" ]]; then
+              # Universal APK (no ABI splits)
+              NEW_NAME="MoodTracker-${VERSION}.apk"
+              mv "$apk" "$NEW_NAME"
+              echo "Renamed: $apk -> $NEW_NAME"
+            elif [[ $apk =~ app-(.+)-debug\.apk ]]; then
+              # ABI-specific APK (e.g., app-arm64-v8a-debug.apk -> arm64-v8a)
+              ABI="${BASH_REMATCH[1]}"
+              NEW_NAME="MoodTracker-${VERSION}-${ABI}.apk"
+              mv "$apk" "$NEW_NAME"
+              echo "Renamed: $apk -> $NEW_NAME"
+            fi
+          done
+
+          ls -lh
+
+      - name: Create and push tag
+        if: steps.check_tag.outputs.exists != 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          NEW_TAG="${{ steps.version.outputs.tag }}"
+          git tag -a "$NEW_TAG" -m "Release $NEW_TAG
+
+          Version: ${{ steps.version.outputs.version_name }}
+          Version Code: ${{ steps.version.outputs.version_code }}
+
+          Workflow: ${{ github.workflow }}
+          Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+
+          git push origin "$NEW_TAG"
+
+      - name: Create GitHub Release
+        if: steps.check_tag.outputs.exists != 'true'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.version.outputs.tag }}
+          name: "MoodTracker ${{ steps.version.outputs.tag }}"
+          draft: true
+          prerelease: true
+          generate_release_notes: true
+          files: app/build/outputs/apk/debug/MoodTracker-*.apk
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload build artifacts
+        if: steps.check_tag.outputs.exists != 'true'
+        uses: actions/upload-artifact@v6
+        with:
+          name: release-apks-${{ steps.version.outputs.tag }}
+          path: app/build/outputs/apk/debug/MoodTracker-*.apk
+          compression-level: 0
+          retention-days: 90
+
+      - name: Summary
+        if: steps.check_tag.outputs.exists != 'true'
+        run: |
+          echo "## Release ${{ steps.version.outputs.tag }} Published" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "✅ Tag created and pushed" >> $GITHUB_STEP_SUMMARY
+          echo "✅ Draft release created with APKs attached" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Next steps:**" >> $GITHUB_STEP_SUMMARY
+          echo "1. Review the draft release" >> $GITHUB_STEP_SUMMARY
+          echo "2. Edit release notes if needed" >> $GITHUB_STEP_SUMMARY
+          echo "3. Publish the release when ready" >> $GITHUB_STEP_SUMMARY
