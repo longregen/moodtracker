@@ -104,19 +104,11 @@ jobs:
           script: |
             set -e
 
-            # Get the APK path
-            APK_PATH=$(find apk -name "app-x86_64-debug.apk" | head -n 1)
-            if [ -z "$APK_PATH" ]; then
-              APK_PATH=$(find apk -name "app-debug.apk" | head -n 1)
-            fi
-            if [ -z "$APK_PATH" ]; then
-              APK_PATH=$(find apk -name "*.apk" | head -n 1)
-            fi
-
-            if [ -z "$APK_PATH" ]; then
-              echo "Error: No APK found"
-              exit 1
-            fi
+            # Get the APK path (using single-line conditionals for compatibility)
+            APK_PATH=$(find apk -name "app-x86_64-debug.apk" 2>/dev/null | head -n 1)
+            [ -z "$APK_PATH" ] && APK_PATH=$(find apk -name "app-debug.apk" 2>/dev/null | head -n 1)
+            [ -z "$APK_PATH" ] && APK_PATH=$(find apk -name "*.apk" 2>/dev/null | head -n 1)
+            [ -z "$APK_PATH" ] && { echo "Error: No APK found"; exit 1; }
 
             echo "Using APK: $APK_PATH"
 
