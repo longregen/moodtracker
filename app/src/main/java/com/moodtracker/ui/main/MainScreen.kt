@@ -77,9 +77,12 @@ fun QuestionCard(
     latestAnswer: Answer?,
     onClick: () -> Unit = {}
 ) {
-    CommonCard(onClick = onClick) {
+    CommonCard(
+        onClick = onClick,
+        showGradientAccent = true
+    ) {
         CardTitle(text = question.text)
-        
+
         if (latestAnswer != null) {
             val timeText = UIUtils.formatAnswerTime(latestAnswer.timestamp)
             CardSubtitle(

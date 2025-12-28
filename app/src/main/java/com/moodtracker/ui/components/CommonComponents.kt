@@ -1,16 +1,26 @@
 package com.moodtracker.ui.components
 
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
+import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.moodtracker.ui.theme.Animations
+import com.moodtracker.ui.theme.GradientColors
 import com.moodtracker.ui.theme.Spacing
 
 @Composable
@@ -95,31 +105,86 @@ fun EmptyStateView(
 fun CommonCard(
     onClick: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
+    showGradientAccent: Boolean = false,
     content: @Composable ColumnScope.() -> Unit
 ) {
+    var isPressed by remember { mutableStateOf(false) }
+    val scale by animateFloatAsState(
+        targetValue = if (isPressed) Animations.CARD_PRESS_SCALE else Animations.CARD_NORMAL_SCALE,
+        animationSpec = spring(),
+        label = "card_scale"
+    )
+
+    val cardModifier = modifier
+        .fillMaxWidth()
+        .scale(scale)
+
     if (onClick != null) {
         Card(
             onClick = onClick,
-            modifier = modifier.fillMaxWidth(),
+            modifier = cardModifier
+                .pointerInput(Unit) {
+                    detectTapGestures(
+                        onPress = {
+                            isPressed = true
+                            tryAwaitRelease()
+                            isPressed = false
+                        }
+                    )
+                },
             elevation = CardDefaults.cardElevation(defaultElevation = Spacing.cardElevation),
             shape = MaterialTheme.shapes.medium
         ) {
-            Column(
-                modifier = Modifier.padding(Spacing.cardPadding)
-            ) {
-                content()
+            Row(modifier = Modifier.fillMaxWidth()) {
+                if (showGradientAccent) {
+                    Box(
+                        modifier = Modifier
+                            .width(Spacing.gradientAccentWidth)
+                            .fillMaxHeight()
+                            .background(
+                                brush = GradientColors.cardAccentGradient(
+                                    primary = MaterialTheme.colorScheme.primary,
+                                    secondary = MaterialTheme.colorScheme.secondary
+                                )
+                            )
+                    )
+                }
+                Column(
+                    modifier = Modifier
+                        .weight(1f)
+                        .padding(Spacing.cardPadding)
+                ) {
+                    content()
+                }
             }
         }
     } else {
         Card(
-            modifier = modifier.fillMaxWidth(),
+            modifier = cardModifier,
             elevation = CardDefaults.cardElevation(defaultElevation = Spacing.cardElevation),
             shape = MaterialTheme.shapes.medium
         ) {
-            Column(
-                modifier = Modifier.padding(Spacing.cardPadding)
-            ) {
-                content()
+            Row(modifier = Modifier.fillMaxWidth()) {
+                if (showGradientAccent) {
+                    Box(
+                        modifier = Modifier
+                            .width(Spacing.gradientAccentWidth)
+                            .fillMaxHeight()
+                            .background(
+                                brush = GradientColors.cardAccentGradient(
+                                    primary = MaterialTheme.colorScheme.primary,
+                                    secondary = MaterialTheme.colorScheme.secondary
+                                )
+                            )
+                    )
+                }
+                Column(
+                    modifier = Modifier
+                        .weight(1f)
+                        .padding(Spacing.cardPadding)
+                ) {
+                    content()
+                }
             }
         }
     }
@@ -184,20 +249,40 @@ fun PrimaryButton(
     enabled: Boolean = true,
     leadingIcon: ImageVector? = null
 ) {
+    val gradientBrush = GradientColors.buttonGradient(
+        primary = MaterialTheme.colorScheme.primary,
+        secondary = MaterialTheme.colorScheme.secondary
+    )
+
     Button(
         onClick = onClick,
-        modifier = modifier.fillMaxWidth(),
-        enabled = enabled
+        modifier = modifier
+            .fillMaxWidth()
+            .heightIn(min = 52.dp),
+        enabled = enabled,
+        colors = ButtonDefaults.buttonColors(
+            containerColor = MaterialTheme.colorScheme.primary
+        ),
+        shape = MaterialTheme.shapes.medium
     ) {
-        leadingIcon?.let {
-            Icon(
-                imageVector = it,
-                contentDescription = null,
-                modifier = Modifier.size(Spacing.iconSizeSmall)
+        Row(
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            leadingIcon?.let {
+                Icon(
+                    imageVector = it,
+                    contentDescription = null,
+                    modifier = Modifier.size(Spacing.iconSizeSmall)
+                )
+                Spacer(modifier = Modifier.width(Spacing.small))
+            }
+            Text(
+                text = text,
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = FontWeight.Bold
             )
-            Spacer(modifier = Modifier.width(Spacing.small))
         }
-        Text(text)
     }
 }
 

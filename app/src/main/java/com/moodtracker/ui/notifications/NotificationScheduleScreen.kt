@@ -280,8 +280,8 @@ fun ScheduleItem(
     onEdit: (String) -> Unit
 ) {
     val context = LocalContext.current
-    
-    CommonCard {
+
+    CommonCard(showGradientAccent = true) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically

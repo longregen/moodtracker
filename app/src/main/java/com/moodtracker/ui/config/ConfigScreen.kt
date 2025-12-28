@@ -3,12 +3,14 @@ package com.moodtracker.ui.config
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -22,6 +24,7 @@ import com.moodtracker.data.models.Question
 import com.moodtracker.data.models.QuestionType
 import com.moodtracker.data.repository.MoodTrackerRepository
 import com.moodtracker.ui.components.*
+import com.moodtracker.ui.theme.AppTheme
 import com.moodtracker.ui.theme.Spacing
 import com.moodtracker.utils.DataUtils
 import kotlinx.coroutines.launch
@@ -33,12 +36,14 @@ enum class ConfigMode {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ConfigScreen(
-    repository: MoodTrackerRepository
+    repository: MoodTrackerRepository,
+    currentTheme: AppTheme = AppTheme.SERENITY,
+    onThemeChange: (AppTheme) -> Unit = {}
 ) {
     var configMode by remember { mutableStateOf(ConfigMode.LIST) }
     var editingQuestion by remember { mutableStateOf<Question?>(null) }
     var showDeleteDialog by remember { mutableStateOf<Question?>(null) }
-    
+
     val questions by repository.getAllQuestions().collectAsState(initial = emptyList())
     val scope = rememberCoroutineScope()
     
@@ -47,6 +52,8 @@ fun ConfigScreen(
             QuestionListView(
                 questions = questions,
                 repository = repository,
+                currentTheme = currentTheme,
+                onThemeChange = onThemeChange,
                 onAddQuestion = { configMode = ConfigMode.ADD_QUESTION },
                 onEditQuestion = { question ->
                     editingQuestion = question
@@ -94,12 +101,15 @@ fun ConfigScreen(
 fun QuestionListView(
     questions: List<Question>,
     repository: MoodTrackerRepository,
+    currentTheme: AppTheme,
+    onThemeChange: (AppTheme) -> Unit,
     onAddQuestion: () -> Unit,
     onEditQuestion: (Question) -> Unit,
     onDeleteQuestion: (Question) -> Unit
 ) {
     val scope = rememberCoroutineScope()
-    
+    var showThemePicker by remember { mutableStateOf(false) }
+
     StandardScreenLayout(
         title = stringResource(R.string.config_title),
         headerActions = {
@@ -111,16 +121,49 @@ fun QuestionListView(
             }
         }
     ) {
-        if (questions.isEmpty()) {
-            EmptyStateView(
-                icon = Icons.Default.Settings,
-                title = stringResource(R.string.empty_questions),
-                subtitle = "Tap the + button to add your first question"
-            )
-        } else {
-            LazyColumn(
-                verticalArrangement = Arrangement.spacedBy(Spacing.cardSpacing)
-            ) {
+        LazyColumn(
+            verticalArrangement = Arrangement.spacedBy(Spacing.cardSpacing)
+        ) {
+            // Theme selector card
+            item {
+                SectionTitle(text = "Appearance")
+                CommonCard(
+                    onClick = { showThemePicker = true },
+                    showGradientAccent = true
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            CardTitle(text = "Theme")
+                            CardSubtitle(text = currentTheme.getDisplayName())
+                        }
+                        Icon(
+                            imageVector = Icons.Default.Palette,
+                            contentDescription = "Change theme",
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                }
+                Spacer(modifier = Modifier.height(Spacing.sectionSpacing))
+            }
+
+            // Questions section
+            item {
+                SectionTitle(text = "Questions")
+            }
+
+            if (questions.isEmpty()) {
+                item {
+                    EmptyStateView(
+                        icon = Icons.Default.Settings,
+                        title = stringResource(R.string.empty_questions),
+                        subtitle = "Tap the + button to add your first question"
+                    )
+                }
+            } else {
                 items(questions) { question ->
                     QuestionConfigCard(
                         question = question,
@@ -136,6 +179,63 @@ fun QuestionListView(
             }
         }
     }
+
+    // Theme picker dialog
+    if (showThemePicker) {
+        ThemePickerDialog(
+            currentTheme = currentTheme,
+            onThemeSelected = { theme ->
+                onThemeChange(theme)
+                showThemePicker = false
+            },
+            onDismiss = { showThemePicker = false }
+        )
+    }
+}
+
+@Composable
+fun ThemePickerDialog(
+    currentTheme: AppTheme,
+    onThemeSelected: (AppTheme) -> Unit,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Choose Theme") },
+        text = {
+            Column(
+                verticalArrangement = Arrangement.spacedBy(Spacing.small)
+            ) {
+                AppTheme.values().forEach { theme ->
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .selectable(
+                                selected = theme == currentTheme,
+                                onClick = { onThemeSelected(theme) }
+                            )
+                            .padding(vertical = Spacing.small),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        RadioButton(
+                            selected = theme == currentTheme,
+                            onClick = { onThemeSelected(theme) }
+                        )
+                        Spacer(modifier = Modifier.width(Spacing.medium))
+                        Text(
+                            text = theme.getDisplayName(),
+                            style = MaterialTheme.typography.bodyLarge
+                        )
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Done")
+            }
+        }
+    )
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -307,7 +407,7 @@ fun QuestionConfigCard(
     onDelete: () -> Unit,
     onToggleVisibility: (Boolean) -> Unit
 ) {
-    CommonCard {
+    CommonCard(showGradientAccent = true) {
         Column {
             Row(
                 modifier = Modifier.fillMaxWidth(),
