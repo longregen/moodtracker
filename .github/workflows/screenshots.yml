@@ -92,6 +92,123 @@ jobs:
       - name: Create screenshots directory
         run: mkdir -p screenshots
 
+      - name: Create screenshot script
+        run: |
+          cat > take-screenshots.sh << 'SCRIPT_EOF'
+          #!/bin/bash
+          set -e
+
+          # Get the APK path
+          APK_PATH=$(find apk -name "app-x86_64-debug.apk" 2>/dev/null | head -n 1)
+          [ -z "$APK_PATH" ] && APK_PATH=$(find apk -name "app-debug.apk" 2>/dev/null | head -n 1)
+          [ -z "$APK_PATH" ] && APK_PATH=$(find apk -name "*.apk" 2>/dev/null | head -n 1)
+
+          if [ -z "$APK_PATH" ]; then
+            echo "Error: No APK found"
+            ls -la apk/ || echo "apk directory not found"
+            exit 1
+          fi
+
+          echo "Using APK: $APK_PATH"
+
+          # Wait for emulator to be ready
+          echo "Waiting for emulator to boot..."
+          adb wait-for-device shell 'while [[ -z $(getprop sys.boot_completed) ]]; do sleep 1; done'
+          sleep 5
+
+          # Install the APK
+          echo "Installing APK..."
+          adb install -r "$APK_PATH"
+
+          # Grant necessary permissions
+          echo "Granting permissions..."
+          adb shell pm grant com.moodtracker android.permission.POST_NOTIFICATIONS || true
+          adb shell pm grant com.moodtracker android.permission.SCHEDULE_EXACT_ALARM || true
+
+          # Disable animations for consistent screenshots
+          adb shell settings put global window_animation_scale 0
+          adb shell settings put global transition_animation_scale 0
+          adb shell settings put global animator_duration_scale 0
+
+          # Set screen to stay on
+          adb shell settings put system screen_off_timeout 600000
+
+          # Launch the app
+          echo "Launching app..."
+          adb shell am start -n com.moodtracker/.MainActivity -a android.intent.action.MAIN -c android.intent.category.LAUNCHER
+
+          # Wait for app to fully load
+          echo "Waiting for app to load..."
+          sleep 8
+
+          # Ensure screen is on
+          adb shell input keyevent KEYCODE_WAKEUP
+          sleep 1
+
+          # Screenshot 1: Main Screen (default landing screen)
+          echo "Taking screenshot of Main screen..."
+          adb shell screencap -p /sdcard/main_screen.png
+          adb pull /sdcard/main_screen.png screenshots/main_screen.png
+          sleep 2
+
+          # Get screen dimensions for calculating tap positions
+          SCREEN_SIZE=$(adb shell wm size | grep -oP 'Physical size: \K.*')
+          echo "Screen size: $SCREEN_SIZE"
+          WIDTH=$(echo $SCREEN_SIZE | cut -d'x' -f1)
+          HEIGHT=$(echo $SCREEN_SIZE | cut -d'x' -f2)
+
+          # Calculate bottom navigation positions
+          NAV_Y=$((HEIGHT - 120))
+
+          # Tab positions (divided into 4 equal sections)
+          TAB1_X=$((WIDTH / 8))
+          TAB2_X=$((3 * WIDTH / 8))
+          TAB3_X=$((5 * WIDTH / 8))
+          TAB4_X=$((7 * WIDTH / 8))
+
+          echo "Navigation Y position: $NAV_Y"
+          echo "Tab positions - Main: $TAB1_X, Logs: $TAB2_X, Notifications: $TAB3_X, Config: $TAB4_X"
+
+          # Screenshot 2: Logs Screen
+          echo "Navigating to Logs screen..."
+          adb shell input tap $TAB2_X $NAV_Y
+          sleep 3
+          echo "Taking screenshot of Logs screen..."
+          adb shell screencap -p /sdcard/logs_screen.png
+          adb pull /sdcard/logs_screen.png screenshots/logs_screen.png
+          sleep 2
+
+          # Screenshot 3: Notifications Screen
+          echo "Navigating to Notifications screen..."
+          adb shell input tap $TAB3_X $NAV_Y
+          sleep 3
+          echo "Taking screenshot of Notifications screen..."
+          adb shell screencap -p /sdcard/notifications_screen.png
+          adb pull /sdcard/notifications_screen.png screenshots/notifications_screen.png
+          sleep 2
+
+          # Screenshot 4: Config Screen
+          echo "Navigating to Config screen..."
+          adb shell input tap $TAB4_X $NAV_Y
+          sleep 3
+          echo "Taking screenshot of Config screen..."
+          adb shell screencap -p /sdcard/config_screen.png
+          adb pull /sdcard/config_screen.png screenshots/config_screen.png
+          sleep 2
+
+          # Return to Main screen
+          echo "Returning to Main screen..."
+          adb shell input tap $TAB1_X $NAV_Y
+          sleep 2
+
+          # Cleanup screenshots from device
+          adb shell rm /sdcard/*.png
+
+          echo "Screenshot generation complete!"
+          ls -lh screenshots/
+          SCRIPT_EOF
+          chmod +x take-screenshots.sh
+
       - name: Generate screenshots with Android Emulator
         uses: reactivecircus/android-emulator-runner@v2
         with:
@@ -101,114 +218,7 @@ jobs:
           target: google_apis
           disable-animations: true
           emulator-options: -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
-          script: |
-            set -e
-
-            # Get the APK path (using single-line conditionals for compatibility)
-            APK_PATH=$(find apk -name "app-x86_64-debug.apk" 2>/dev/null | head -n 1)
-            [ -z "$APK_PATH" ] && APK_PATH=$(find apk -name "app-debug.apk" 2>/dev/null | head -n 1)
-            [ -z "$APK_PATH" ] && APK_PATH=$(find apk -name "*.apk" 2>/dev/null | head -n 1)
-            [ -z "$APK_PATH" ] && { echo "Error: No APK found"; exit 1; }
-
-            echo "Using APK: $APK_PATH"
-
-            # Wait for emulator to be ready
-            echo "Waiting for emulator to boot..."
-            adb wait-for-device shell 'while [[ -z $(getprop sys.boot_completed) ]]; do sleep 1; done'
-            sleep 5
-
-            # Install the APK
-            echo "Installing APK..."
-            adb install -r "$APK_PATH"
-
-            # Grant necessary permissions
-            echo "Granting permissions..."
-            adb shell pm grant com.moodtracker android.permission.POST_NOTIFICATIONS || true
-            adb shell pm grant com.moodtracker android.permission.SCHEDULE_EXACT_ALARM || true
-
-            # Disable animations for consistent screenshots
-            adb shell settings put global window_animation_scale 0
-            adb shell settings put global transition_animation_scale 0
-            adb shell settings put global animator_duration_scale 0
-
-            # Set screen to stay on
-            adb shell settings put system screen_off_timeout 600000
-
-            # Launch the app
-            echo "Launching app..."
-            adb shell am start -n com.moodtracker/.MainActivity -a android.intent.action.MAIN -c android.intent.category.LAUNCHER
-
-            # Wait for app to fully load
-            echo "Waiting for app to load..."
-            sleep 8
-
-            # Ensure screen is on
-            adb shell input keyevent KEYCODE_WAKEUP
-            sleep 1
-
-            # Screenshot 1: Main Screen (default landing screen)
-            echo "Taking screenshot of Main screen..."
-            adb shell screencap -p /sdcard/main_screen.png
-            adb pull /sdcard/main_screen.png screenshots/main_screen.png
-            sleep 2
-
-            # Get screen dimensions for calculating tap positions
-            SCREEN_SIZE=$(adb shell wm size | grep -oP 'Physical size: \K.*')
-            echo "Screen size: $SCREEN_SIZE"
-            WIDTH=$(echo $SCREEN_SIZE | cut -d'x' -f1)
-            HEIGHT=$(echo $SCREEN_SIZE | cut -d'x' -f2)
-
-            # Calculate bottom navigation positions
-            # Bottom nav is typically 80dp high, which is ~240px on xxhdpi devices
-            # Navigation items are evenly distributed across 4 tabs
-            NAV_Y=$((HEIGHT - 120))
-
-            # Tab positions (divided into 4 equal sections)
-            TAB1_X=$((WIDTH / 8))      # Main (1st quarter, center)
-            TAB2_X=$((3 * WIDTH / 8))  # Logs (2nd quarter, center)
-            TAB3_X=$((5 * WIDTH / 8))  # Notifications (3rd quarter, center)
-            TAB4_X=$((7 * WIDTH / 8))  # Config (4th quarter, center)
-
-            echo "Navigation Y position: $NAV_Y"
-            echo "Tab positions - Main: $TAB1_X, Logs: $TAB2_X, Notifications: $TAB3_X, Config: $TAB4_X"
-
-            # Screenshot 2: Logs Screen
-            echo "Navigating to Logs screen..."
-            adb shell input tap $TAB2_X $NAV_Y
-            sleep 3
-            echo "Taking screenshot of Logs screen..."
-            adb shell screencap -p /sdcard/logs_screen.png
-            adb pull /sdcard/logs_screen.png screenshots/logs_screen.png
-            sleep 2
-
-            # Screenshot 3: Notifications Screen
-            echo "Navigating to Notifications screen..."
-            adb shell input tap $TAB3_X $NAV_Y
-            sleep 3
-            echo "Taking screenshot of Notifications screen..."
-            adb shell screencap -p /sdcard/notifications_screen.png
-            adb pull /sdcard/notifications_screen.png screenshots/notifications_screen.png
-            sleep 2
-
-            # Screenshot 4: Config Screen
-            echo "Navigating to Config screen..."
-            adb shell input tap $TAB4_X $NAV_Y
-            sleep 3
-            echo "Taking screenshot of Config screen..."
-            adb shell screencap -p /sdcard/config_screen.png
-            adb pull /sdcard/config_screen.png screenshots/config_screen.png
-            sleep 2
-
-            # Optional: Go back to Main screen and take another screenshot to verify navigation
-            echo "Returning to Main screen..."
-            adb shell input tap $TAB1_X $NAV_Y
-            sleep 2
-
-            # Cleanup screenshots from device
-            adb shell rm /sdcard/*.png
-
-            echo "Screenshot generation complete!"
-            ls -lh screenshots/
+          script: ./take-screenshots.sh
 
       - name: Verify screenshots were created
         run: |
