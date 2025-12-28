@@ -13,8 +13,8 @@ android {
         applicationId = "com.moodtracker"
         minSdk = 24
         targetSdk = 35
-        versionCode = 1
-        versionName = "1.0"
+        versionCode = 2
+        versionName = "2.0.0"
 
         // Disable test instrumentation runner for Nix builds to avoid configuration ambiguity
         if (System.getenv("NIX_BUILD") != "1") {
