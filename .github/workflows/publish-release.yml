@@ -134,7 +134,7 @@ jobs:
 
       - name: Upload build artifacts
         if: steps.check_tag.outputs.exists != 'true'
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: release-apks-${{ steps.version.outputs.tag }}
           path: app/build/outputs/apk/debug/MoodTracker-*.apk
